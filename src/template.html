@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
 <title>馬哥箭頭逃脫 · Mago Arrows</title>
 <meta name="description" content="一款單檔、離線可玩的箭頭邏輯解謎遊戲。點一下箭頭，它就沿自己的軌道衝出棋盤 —— 前提是前方那條直線完全淨空。">
 <meta name="theme-color" content="#3F7D4E">
@@ -58,8 +58,10 @@ html,body{height:100%;height:100dvh;overflow:hidden}
 body{
   font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
   background:var(--desk);color:var(--ink);user-select:none;-webkit-user-select:none;
-  display:grid;place-items:center;transition:background .3s}
-#app{position:relative;overflow:hidden;container-type:inline-size;
+  display:grid;place-items:center;transition:background .3s;
+  /* 手機上關掉「連點兩下放大整個頁面」，不然頁面被瀏覽器放大後遊戲裡的 ⤢ 救不回來 */
+  touch-action:manipulation;-webkit-text-size-adjust:100%}
+#app{position:relative;overflow:hidden;container-type:inline-size;touch-action:manipulation;
   width:min(100vw,var(--appW));
   height:min(100%,calc(min(100vw,var(--appW))*var(--appR)));
   max-height:100%;
@@ -393,8 +395,8 @@ html[data-theme="night"] #gen,html[data-theme="ink"] #gen,html[data-theme="plum"
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
         stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="iconbtn tiny" id="btnRestart" title="重來">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-        stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8 8 0 106.3 6.3M20 4v6h-6"/></svg></button>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 5v4h4"/></svg></button>
   </div>
   <div id="boardWrap">
     <div id="boardPanel"><div id="board">

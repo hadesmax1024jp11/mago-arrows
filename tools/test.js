@@ -232,6 +232,16 @@ async function testDom() {
   $('btnGrid').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   await wait(1400);
 
+  head('縮放不會卡在奇怪的比例');
+  win.eval("setZoom(1.06)"); await wait(30);
+  ok(Math.abs(A.G.zoom - 1.06) < 0.02, '先手動把盤面縮放到 1.06', 'zoom=' + A.G.zoom.toFixed(3));
+  A.snapZoom(); await wait(30);
+  ok(Math.abs(A.G.zoom - 1) < 0.001, '放手後會吸回 1×（手機誤觸兩指的救援）', 'zoom=' + A.G.zoom.toFixed(3));
+  win.eval("setZoom(1.8)"); await wait(30);
+  A.snapZoom();
+  ok(Math.abs(A.G.zoom - 1.8) < 0.02, '真的想放大時不會被吸回去', 'zoom=' + A.G.zoom.toFixed(2));
+  win.eval("setZoom(1)"); await wait(30);
+
   head('整關玩到過關');
   let guard = 0;
   while (A.G && !A.G.over && A.G.items.length && guard++ < 60) {
@@ -370,7 +380,54 @@ function testClean() {
     'LICENSE 與 README 都在');
 }
 
+/* 走一遍 SVG path，回傳每個節點的絕對座標（支援 M/L/H/V/A 與其小寫版） */
+function pathPoints(d) {
+  const t = d.match(/[a-zA-Z]|-?\d+(?:\.\d+)?/g) || [];
+  let i = 0, x = 0, y = 0, cmd = '';
+  const out = [], num = () => +t[i++];
+  while (i < t.length) {
+    if (/[a-zA-Z]/.test(t[i])) cmd = t[i++];
+    if (i > t.length) break;
+    switch (cmd) {
+      case 'M': case 'L': x = num(); y = num(); break;
+      case 'm': case 'l': x += num(); y += num(); break;
+      case 'H': x = num(); break;
+      case 'h': x += num(); break;
+      case 'V': y = num(); break;
+      case 'v': y += num(); break;
+      case 'A': num(); num(); num(); num(); num(); x = num(); y = num(); break;
+      case 'a': num(); num(); num(); num(); num(); x += num(); y += num(); break;
+      case 'Z': case 'z': break;
+      default: i++; continue;
+    }
+    out.push([+x.toFixed(2), +y.toFixed(2)]);
+  }
+  return out;
+}
+
 function testCss() {
+  head('圖示與手機縮放的靜態檢查');
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const svgs = [...html.matchAll(/<button class="iconbtn[^"]*"[^>]*>\s*<svg[^>]*>([\s\S]*?)<\/svg>/g)];
+  ok(svgs.length >= 4, `讀到 ${svgs.length} 個 HUD 圖示`);
+  const badCoord = [], bigArc = [];
+  for (const m of svgs) {
+    for (const d of [...m[1].matchAll(/d="([^"]+)"/g)].map(x => x[1])) {
+      // 走一遍路徑算出實際落點（相對指令的負數是位移，不能直接當座標看）
+      for (const [px, py] of pathPoints(d))
+        if (px < -0.6 || px > 24.6 || py < -0.6 || py > 24.6)
+          badCoord.push(d.slice(0, 26) + ` :: (${px},${py})`);
+      // 弧線半徑超過 9 的話，弧一定凸出 24x24 被切掉（就是重來鈕破圖的原因）
+      for (const a of [...d.matchAll(/[aA]\s*(\d+(?:\.\d+)?)[ ,]+(\d+(?:\.\d+)?)/g)])
+        if (+a[1] > 9 || +a[2] > 9) bigArc.push(d.slice(0, 30) + ' :: r=' + a[1]);
+    }
+  }
+  ok(badCoord.length === 0, '圖示的座標都在畫布內', badCoord.slice(0, 3).join(' | '));
+  ok(bigArc.length === 0, '沒有半徑過大、會被畫布切掉的弧線', bigArc.slice(0, 3).join(' | '));
+  ok(/touch-action:manipulation/.test(html), 'body/#app 有 touch-action:manipulation（關掉連點兩下放大頁面）');
+  ok(/maximum-scale=1/.test(html), 'viewport 有 maximum-scale=1');
+  ok(/gesturestart/.test(html) && /dblclick/.test(html), '有擋掉 iOS 的 gesture 與連點兩下');
+
   head('格線顏色：每個主題都要看得見');
   const css = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const lum = h => {

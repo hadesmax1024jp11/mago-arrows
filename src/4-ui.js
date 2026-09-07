@@ -525,14 +525,34 @@ function endDrag() {
   $('boardWrap').classList.remove('panning');
   if (!was && o) onTap(o);
 }
+/* 雙指放開後把縮放「吸」回整數狀態。
+   手機上很容易在點箭頭時不小心多碰一根手指，縮放停在 1.04 這種值，
+   看起來就是「盤面莫名被放大一點又回不去」。差一點就直接歸位。 */
+function snapZoom() {
+  if (!G) return;
+  const r = zoomRange(), z = G.zoom || 1;
+  if (Math.abs(z - 1) < 0.12) { setZoom(1); setPan(G.panX, G.panY); }
+  else if (Math.abs(z - r.min) < 0.12) setZoom(r.min);
+}
 addEventListener('pointerup', ev => {
   PTRS.delete(pid(ev));
-  if (PTRS.size < 2 && PINCH) { PINCH = null; DRAG = null; PEND = null; redrawSoon(); }
+  if (PTRS.size < 2 && PINCH) { PINCH = null; DRAG = null; PEND = null; snapZoom(); redrawSoon(); }
   if (PTRS.size === 0 && (DRAG || PEND || !PINCH)) endDrag();
 });
+/* 手指離開螢幕或切到背景時，別讓 PINCH 卡住（卡住的話點擊會被當成縮放而被吃掉） */
+addEventListener('blur', () => { PTRS.clear(); PINCH = null; DRAG = null; DRAGGED = false; PEND = null; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { PTRS.clear(); PINCH = null; DRAG = null; DRAGGED = false; PEND = null; }
+});
+/* iOS Safari 不理 user-scalable=no，要自己擋 gesture 事件與連點兩下，
+   否則被放大的是整個頁面（不是盤面），遊戲裡任何按鈕都救不回來。 */
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 addEventListener('pointercancel', ev => {
   PTRS.delete(pid(ev)); PINCH = null; PEND = null; DRAG = null; DRAGGED = false;
   $('boardWrap').classList.remove('panning');
+  snapZoom();
 });
 $('boardWrap').addEventListener('wheel', ev => {
   if (!G || G.over) return;
@@ -580,7 +600,8 @@ loadPack().then(() => {
   if (typeof window !== 'undefined') window.__MAGO = {
     S, K, slotOf, levelSource, generate, decodeLevel, tierOf, pickTier, anyMove, pathOf,
     newLevel, boardBox, findSlot, awardList, weekTag, dailySeed, solvableLv, branchProfile,
-    get P() { return P; }, get G() { return G; }, get ac() { return ac; }, unlockAudio
+    get P() { return P; }, get G() { return G; }, get ac() { return ac; }, unlockAudio,
+    snapZoom, setZoom, zoomRange
   };
 }).catch(err => {
   $('splash').innerHTML = `<div style="padding:26px;text-align:center;font-size:13px;line-height:1.7">
