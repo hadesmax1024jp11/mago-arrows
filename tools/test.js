@@ -464,6 +464,17 @@ function testCss() {
   ok(/maximum-scale=1/.test(html), 'viewport 有 maximum-scale=1');
   ok(/gesturestart/.test(html) && /dblclick/.test(html), '有擋掉 iOS 的 gesture 與連點兩下');
 
+  head('版本戳');
+  /* 版本號是判斷「手機上開到的是不是舊版」的唯一依據，
+     所以 build.py 沒注入成功要當成錯誤，不能只是顯示空白。 */
+  const pkgV = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+  const stamp = html.match(/const VERSION = '([^']*)', BUILT = '([^']*)'/);
+  ok(stamp != null, 'index.html 裡有版本宣告');
+  ok(stamp && stamp[1] === pkgV, `版本號跟 package.json 一致 v${pkgV}`, stamp ? stamp[1] : '');
+  ok(stamp && /^\d{4}-\d{2}-\d{2}$/.test(stamp[2]), 'build 日期是 YYYY-MM-DD', stamp ? stamp[2] : '');
+  ok(!/__VERSION__|__BUILT__/.test(html), '佔位字串都被取代掉了');
+  ok(/class="vstamp"/.test(html), '說明頁有版本戳的節點');
+
   head('格線顏色：每個主題都要看得見');
   const css = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const lum = h => {

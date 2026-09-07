@@ -307,6 +307,9 @@ body{
   line-height:1.72;color:var(--ink2);margin-bottom:13px}
 .tut b{color:var(--ink)}
 .tut .mini{font-size:11.5px;color:var(--ink3)}
+/* 版本戳：Pages 會被快取，手機上開到舊版時要分得出來 */
+.vstamp{margin:10px 2px 0;font-size:11px;color:var(--ink3);opacity:.75;
+  font-variant-numeric:tabular-nums;letter-spacing:.02em}
 
 /* ---------------- 載入 / 生成中 ---------------- */
 #splash,#gen{position:absolute;inset:0;display:grid;place-items:center;z-index:90;background:var(--paper)}
@@ -499,6 +502,11 @@ const TIERNAME = {
   zh: ['悠閒', '認真', '硬派', '無情'],
   en: ['Gentle', 'Tricky', 'Brutal', 'Merciless']
 };
+/* 版本號與 build 日期由 build.py 從 package.json 注入。
+   直接用 node 跑 1-core.js（bake / test）時會留著佔位字串 —— 只影響顯示，不影響邏輯。
+   會想顯示這個是因為 Pages 常被瀏覽器快取，手機上開到舊版時得分得出來。 */
+const VERSION = '1.0.0', BUILT = '2026-09-07';
+
 const ONBOARD_LEVELS = 30;      // 手排新手期
 const SHAPED_EVERY = 5;         // 每 5 關一個圖形關（減壓閥：分段不變，視覺密度砍半）
 
@@ -2359,6 +2367,7 @@ function howto() {
       solution exists. The first ${P ? P.n : 300} levels are baked into the file; later ones are
       generated on the spot. The little guy is <b>Mago</b> — he only pops up in the empty band
       outside the board.</span>`}</div>
+    <div class="vstamp">v${VERSION} · ${S.lang === 'zh' ? '建置' : 'built'} ${BUILT}</div>
     <div class="cardbtns"><button class="btn" data-a="close">${T('close')}</button></div>`);
 }
 

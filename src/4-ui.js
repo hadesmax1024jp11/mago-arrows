@@ -426,6 +426,7 @@ function howto() {
       solution exists. The first ${P ? P.n : 300} levels are baked into the file; later ones are
       generated on the spot. The little guy is <b>Mago</b> — he only pops up in the empty band
       outside the board.</span>`}</div>
+    <div class="vstamp">v${VERSION} · ${S.lang === 'zh' ? '建置' : 'built'} ${BUILT}</div>
     <div class="cardbtns"><button class="btn" data-a="close">${T('close')}</button></div>`);
 }
 

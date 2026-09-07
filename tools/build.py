@@ -13,7 +13,7 @@ Inputs (src/):
   pack.b64        levels 1..N baked at build time (node tools/bake.js)
   sprites.json    Mago sprite sheet as data: URLs
 """
-import json, os, sys
+import datetime, json, os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -37,9 +37,20 @@ def main():
         if token not in tpl:
             raise SystemExit(f"template is missing {token}")
 
+    # 版本號的唯一來源是 package.json；日期是這次 build 的日期
+    with open(os.path.join(ROOT, "package.json"), encoding="utf-8") as f:
+        version = json.load(f)["version"]
+    built = datetime.date.today().isoformat()
+
+    for token in ("__VERSION__", "__BUILT__"):
+        if token not in js:
+            raise SystemExit(f"少了 {token} 宣告（應該在 1-core.js）")
+
     html = (tpl.replace("__SPRITES_JSON__", sprites)
                .replace("__PACK_B64__", pack)
-               .replace("__GAME_JS__", js))
+               .replace("__GAME_JS__", js)
+               .replace("__VERSION__", version)
+               .replace("__BUILT__", built))
     with open(OUT, "w", encoding="utf-8") as f:
         f.write(html)
 
@@ -47,7 +58,8 @@ def main():
         print(f"  {n:14s} {len(read(n))/1e3:7.1f} kB")
     print(f"  {'sprites':14s} {len(sprites)/1e3:7.1f} kB")
     print(f"  {'pack':14s} {len(pack)/1e3:7.1f} kB")
-    print(f"-> {os.path.relpath(OUT, ROOT)}  {os.path.getsize(OUT)/1e3:.0f} kB")
+    print(f"-> {os.path.relpath(OUT, ROOT)}  {os.path.getsize(OUT)/1e3:.0f} kB"
+          f"   v{version}  built {built}")
 
 
 if __name__ == "__main__":

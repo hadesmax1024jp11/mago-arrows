@@ -25,6 +25,11 @@ const TIERNAME = {
   zh: ['悠閒', '認真', '硬派', '無情'],
   en: ['Gentle', 'Tricky', 'Brutal', 'Merciless']
 };
+/* 版本號與 build 日期由 build.py 從 package.json 注入。
+   直接用 node 跑 1-core.js（bake / test）時會留著佔位字串 —— 只影響顯示，不影響邏輯。
+   會想顯示這個是因為 Pages 常被瀏覽器快取，手機上開到舊版時得分得出來。 */
+const VERSION = '__VERSION__', BUILT = '__BUILT__';
+
 const ONBOARD_LEVELS = 30;      // 手排新手期
 const SHAPED_EVERY = 5;         // 每 5 關一個圖形關（減壓閥：分段不變，視覺密度砍半）
 
