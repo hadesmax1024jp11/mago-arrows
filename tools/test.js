@@ -210,6 +210,28 @@ async function testDom() {
   $('btnGrid').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   await wait(1200);
 
+  head('手機：音訊解鎖與按鈕回饋');
+  ok(A.ac && A.ac.state === 'running',
+    'AudioContext 在使用者手勢後變成 running（手機才聽得到聲音）', A.ac ? A.ac.state : 'no ctx');
+  const toastEl = $('toast');
+  toastEl.classList.remove('on');
+  $('btnFit').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await wait(60);
+  ok(toastEl.classList.contains('on') && toastEl.textContent.length > 0,
+    '⤢ 一定會給回饋（小關卡不縮放時也會說明）', toastEl.textContent);
+  const z1 = A.G.zoom;
+  ok(Math.abs(z1 - 1) > 0.05, '⤢ 在整盤放得下的關卡改當放大鏡用', 'zoom=' + z1.toFixed(2));
+  $('btnFit').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await wait(60);
+  ok(Math.abs(A.G.zoom - 1) < 0.05, '再按一次回到原大小');
+  toastEl.classList.remove('on');
+  $('btnGrid').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await wait(60);
+  ok(toastEl.classList.contains('on') && /開|on/i.test(toastEl.textContent),
+    '格線鈕說得出現在是開還是關', toastEl.textContent);
+  $('btnGrid').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await wait(1400);
+
   head('整關玩到過關');
   let guard = 0;
   while (A.G && !A.G.over && A.G.items.length && guard++ < 60) {
@@ -348,11 +370,34 @@ function testClean() {
     'LICENSE 與 README 都在');
 }
 
+function testCss() {
+  head('格線顏色：每個主題都要看得見');
+  const css = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const lum = h => {
+    const n = parseInt(h.slice(1), 16);
+    return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255));
+  };
+  const blocks = [...css.matchAll(/(?:^|\})([^{}]*)\{([^}]*--grid:[^}]*)\}/gm)];
+  let checked = 0, weak = [];
+  for (const b of blocks) {
+    const body = b[2];
+    const g = (body.match(/--grid:\s*(#[0-9A-Fa-f]{6})/) || [])[1];
+    const pn = (body.match(/--panel:\s*(#[0-9A-Fa-f]{6})/) || [])[1];
+    if (!g || !pn) continue;
+    checked++;
+    const d = Math.abs(lum(g) - lum(pn));
+    if (d < 8) weak.push(`${b[1].trim().slice(0, 28)} Δ${d.toFixed(1)}`);
+  }
+  ok(checked >= 6, `讀到 ${checked} 個主題的格線設定`);
+  ok(weak.length === 0, '格線與盤面底色的亮度差都 ≥ 8（畫在白盤上看得出來）', weak.join(' | '));
+}
+
 (async () => {
   const t0 = Date.now();
   try {
     if (which === 'all' || which === 'data') await testData();
     if (which === 'all' || which === 'dom') await testDom();
+    if (which === 'all' || which === 'css') testCss();
     if (which === 'all' || which === 'clean') testClean();
   } catch (e) {
     fail++; console.log('\n!! 測試中斷：' + (e && e.stack || e));

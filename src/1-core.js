@@ -85,6 +85,8 @@ const STR = {
     autoS: '自動收尾', autoD: '只剩三支時自動放它們出去', reset: '清除進度',
     resetQ: '確定要清除全部進度？', yes: '確定', no: '取消', loading: '生成關卡中…',
     shapedTag: '圖形關', mapFoot: '往下滑看更多關卡', promo: '晉級區', hold: '保留區',
+    fitWhole: '整盤檢視', zoom1x: '原大小 1×', zoomIn: '放大 1.8×', zoomOut: '回到原大小',
+    gridOn: '格線：開', gridOff: '格線：關',
     genfail: '這一關生成失敗了，換一關試試'
   },
   en: {
@@ -104,14 +106,17 @@ const STR = {
     lockedLP: 'Scoring starts at level {0}', locked: 'Locked',
     newLevelIn: 'Next level in {0}h {1}m {2}s', done: 'Done', todayD: "Today's level",
     topN: 'Rank {0}', week: 'This week', score: 'Score', combo: 'Combo', arrows: 'Arrows',
-    sounds: 'Sound', vibr: 'Vibration', themes: 'Theme', lang: 'Language',
+    sounds: 'Sound', soundsD: "On iPhone the side mute switch silences web audio",
+    vibr: 'Vibration', themes: 'Theme', lang: 'Language',
     guideS: 'Path guide', guideD: 'Show the exit path while holding an arrow',
     safeS: 'Tap protection', safeD: 'Select first, tap again to move',
     mascotS: 'Mago cheers', mascotD: 'Let Mago pop up beside the board',
     autoS: 'Auto finish', autoD: 'Clear the last three arrows automatically',
     reset: 'Reset progress', resetQ: 'Delete all progress?', yes: 'Yes', no: 'Cancel',
     loading: 'Building level…', shapedTag: 'Shaped', mapFoot: 'Scroll for more levels',
-    promo: 'PROMOTION', hold: 'HOLD', genfail: 'That level failed to build — try another'
+    promo: 'PROMOTION', hold: 'HOLD', genfail: 'That level failed to build — try another',
+    fitWhole: 'Whole board', zoom1x: 'Actual size 1×', zoomIn: 'Zoomed to 1.8×',
+    zoomOut: 'Back to actual size', gridOn: 'Grid on', gridOff: 'Grid off'
   }
 };
 let L = STR.zh;
@@ -153,9 +158,30 @@ function dailySeed(stamp) {
   const p = stamp.split('-').map(Number);
   return 900000 + (hash32(p[0] * 10000 + p[1] * 100 + p[2], 0xDA11) % 90000);
 }
-/* 音效 */
-let ac = null;
-const actx = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } return ac; };
+/* ---------- 音效 ----------
+   手機瀏覽器（尤其 iOS）建立的 AudioContext 一開始是 suspended，
+   必須在**使用者手勢裡**呼叫 resume()，而且 iOS 還要先播一個無聲 buffer 才算解鎖。
+   所以除了每次取用時 resume，另外掛一次性的 touch/click 監聽當保險。 */
+let ac = null, acReady = false;
+function actx() {
+  if (!ac) {
+    try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { }
+  }
+  if (ac && ac.state === 'suspended') { try { ac.resume(); } catch (e) { } }
+  return ac;
+}
+function unlockAudio() {
+  if (acReady) return;
+  const c = actx();
+  if (!c) return;
+  try {
+    const b = c.createBuffer(1, 1, 22050), src = c.createBufferSource();
+    src.buffer = b; src.connect(c.destination); src.start(0);
+    acReady = true;
+  } catch (e) { }
+}
+['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev =>
+  addEventListener(ev, unlockAudio, { passive: true }));
 function tone(f, d, type, vol, slide) {
   if (!S.sfx) return; const c = actx(); if (!c) return;
   const o = c.createOscillator(), g = c.createGain();

@@ -13,7 +13,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --paper:#F8F6F0; --paper2:#F0EDE2; --panel:#FFFFFF; --edge:#E3DFCF;
-  --dot:#D8D3C1; --grid:#EBE7D9; --cell:#EDE9DB;
+  --dot:#D8D3C1; --grid:#DCD5C0; --cell:#EDE9DB;
   --ink:#2A3326; --ink2:#6B7264; --ink3:#A3A797;
   --arrow:#2A3326; --key:#3F7D4E; --keyD:#2F6039; --keyL:#E7F0E5;
   --err:#D8503F; --gold:#E0A82E;
@@ -23,33 +23,33 @@
 }
 html[data-theme="bamboo"]{
   --paper:#F3F7F0; --paper2:#E8F0E4; --panel:#FFFFFF; --edge:#D5E3CF;
-  --dot:#C8DCC2; --grid:#E0EBDB; --cell:#E1EEDC; --keyL:#E0F0DE;
+  --dot:#C8DCC2; --grid:#CBDFC5; --cell:#E1EEDC; --keyL:#E0F0DE;
   --ink:#1F3324; --ink2:#5B7160; --ink3:#94A897;
   --arrow:#1F3324; --key:#2F8B57; --keyD:#226B42; --desk:#D9E6D4;
 }
 html[data-theme="roast"]{
   --paper:#F5EFE4; --paper2:#EBE2D2; --panel:#FCF8F1; --edge:#DCCFB8;
-  --dot:#D2C3A7; --grid:#E6DCC8; --cell:#E7DCC7; --keyL:#F1E5D2;
+  --dot:#D2C3A7; --grid:#D5C7A9; --cell:#E7DCC7; --keyL:#F1E5D2;
   --ink:#3A2A1B; --ink2:#7C6650; --ink3:#B0A08A;
   --arrow:#3A2A1B; --key:#B4712C; --keyD:#8E5620; --desk:#E3D8C4;
 }
 html[data-theme="night"]{
   --paper:#15201B; --paper2:#1C2B23; --panel:#1C2B23; --edge:#2A3D31;
-  --dot:#31473A; --grid:#233428; --cell:#243629; --keyL:#1E3E2C;
+  --dot:#31473A; --grid:#334B3C; --cell:#243629; --keyL:#1E3E2C;
   --ink:#EAF2E7; --ink2:#9BB0A2; --ink3:#6E8377;
   --arrow:#EAF2E7; --key:#4FB07A; --keyD:#38885C;
   --shadow:rgba(0,0,0,.45); --desk:#0B120E;
 }
 html[data-theme="ink"]{
   --paper:#141414; --paper2:#1C1C1C; --panel:#1C1C1C; --edge:#2C2C2C;
-  --dot:#343434; --grid:#242424; --cell:#262626; --keyL:#2A2A2A;
+  --dot:#343434; --grid:#3A3A3A; --cell:#262626; --keyL:#2A2A2A;
   --ink:#F2F0EA; --ink2:#A6A49C; --ink3:#71706A;
   --arrow:#F2F0EA; --key:#C9A227; --keyD:#9E7D18;
   --shadow:rgba(0,0,0,.5); --desk:#000000;
 }
 html[data-theme="plum"]{
   --paper:#221A26; --paper2:#2C2131; --panel:#2C2131; --edge:#3B2D42;
-  --dot:#48364F; --grid:#312537; --cell:#372840; --keyL:#3A2748;
+  --dot:#48364F; --grid:#4B3853; --cell:#372840; --keyL:#3A2748;
   --ink:#F5EAF3; --ink2:#BBA3C0; --ink3:#8A7490;
   --arrow:#F5EAF3; --key:#C56C9B; --keyD:#A24E7C;
   --shadow:rgba(0,0,0,.45); --desk:#150F18;
@@ -102,8 +102,8 @@ body{
 .iconbtn.badge b{position:absolute;right:-3px;top:-3px;background:var(--key);color:#fff;font-size:10px;
   min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;font-weight:900;
   padding:0 4px;box-shadow:0 0 0 2.5px var(--paper)}
-.iconbtn.tiny{width:32px;height:32px}
-.iconbtn.tiny svg{width:16px;height:16px}
+.iconbtn.tiny{width:36px;height:36px}
+.iconbtn.tiny svg{width:17px;height:17px}
 .chip{background:var(--cell);border-radius:99px;padding:7px 14px;font-weight:800;font-size:14px;color:var(--ink)}
 .chip.diff{color:#fff;font-size:12.5px;letter-spacing:.02em;padding:8px 13px}
 .h2{font-size:23px;font-weight:900}
@@ -164,7 +164,7 @@ body{
 .heart.gone{opacity:.22;transform:scale(.7)}
 .heart.pulse{animation:hpop .45s ease}
 @keyframes hpop{0%{transform:scale(1)}35%{transform:scale(1.45) rotate(-12deg)}100%{transform:scale(.7)}}
-.progrow{display:flex;align-items:center;gap:6px;margin:8px 2px 0;flex:0 0 auto}
+.progrow{display:flex;align-items:center;gap:7px;margin:8px 2px 0;flex:0 0 auto}
 .progwrap{flex:1;height:5px;background:var(--cell);border-radius:99px;overflow:hidden}
 .progbar{height:100%;width:0;border-radius:99px;background:var(--key);transition:width .3s}
 #boardWrap{flex:1;position:relative;min-height:0;overflow:hidden;touch-action:none}

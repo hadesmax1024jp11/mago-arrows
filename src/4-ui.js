@@ -340,7 +340,7 @@ function settings() {
   const row = (k, t, d) => `<div class="setrow"><div>${t}${d ? `<div class="sd">${d}</div>` : ''}</div>
     <div class="sw${S[k] ? ' on' : ''}" data-t="${k}"></div></div>`;
   modal(`<h2 style="margin-bottom:10px">${T('settings')}</h2>
-    ${row('sfx', T('sounds'))}
+    ${row('sfx', T('sounds'), T('soundsD'))}
     ${row('vibr', T('vibr'))}
     <div class="setrow"><div>${T('themes')}</div><div class="seg" id="segTheme">
       ${THEMES.map(([v, zh, en]) => `<button data-v="${v}" class="${S.theme === v ? 'on' : ''}">${S.lang === 'zh' ? zh : en}</button>`).join('')}
@@ -449,12 +449,28 @@ document.querySelectorAll('[data-back]').forEach(b =>
   b.addEventListener('click', () => go(b.dataset.back)));
 $('btnBack').addEventListener('click', () => { hush(); go(G && G.daily ? 'daily' : 'map'); });
 $('btnRestart').addEventListener('click', askRestart);
-$('btnFit').addEventListener('click', () => { if (G) { fitBoard(); SFX.tap(); } });
+/* ⤢：盤面比畫面大時在「整盤 ↔ 1×」之間切；本來就看得完時就當放大鏡用。
+   一定要給回饋，不然小關卡按下去看起來像壞的。 */
+$('btnFit').addEventListener('click', () => {
+  if (!G) return;
+  SFX.tap();
+  const r = zoomRange(), z = G.zoom || 1;
+  if (r.min >= 1) {                       // 整盤本來就放得下
+    const zoomIn = z <= 1.05;
+    setZoom(zoomIn ? 1.8 : 1);
+    setPan(0, 0); redrawSoon();
+    toast(T(zoomIn ? 'zoomIn' : 'zoomOut'), 1300);
+    return;
+  }
+  const wasFit = Math.abs(z - r.min) < 0.02;
+  fitBoard();
+  toast(T(wasFit ? 'zoom1x' : 'fitWhole'), 1300);
+});
 $('btnGrid').addEventListener('click', () => {
   S.grid = !S.grid; save(); SFX.tap();
   $('btnGrid').classList.toggle('on', S.grid);
   if (G) drawGrid();
-  toast(T('gridTip'), 1400);
+  toast(T(S.grid ? 'gridOn' : 'gridOff'), 1300);
 });
 $('btnHint').addEventListener('click', () => {
   if (!G || G.busy || G.over) return;
@@ -564,7 +580,7 @@ loadPack().then(() => {
   if (typeof window !== 'undefined') window.__MAGO = {
     S, K, slotOf, levelSource, generate, decodeLevel, tierOf, pickTier, anyMove, pathOf,
     newLevel, boardBox, findSlot, awardList, weekTag, dailySeed, solvableLv, branchProfile,
-    get P() { return P; }, get G() { return G; }
+    get P() { return P; }, get G() { return G; }, get ac() { return ac; }, unlockAudio
   };
 }).catch(err => {
   $('splash').innerHTML = `<div style="padding:26px;text-align:center;font-size:13px;line-height:1.7">

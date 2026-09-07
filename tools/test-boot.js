@@ -24,6 +24,8 @@ function makeDom(w, h) {
       win.navigator.vibrate = () => true;
       win.AudioContext = function () {
         this.currentTime = 0; this.sampleRate = 44100;
+        this.state = 'suspended';                       // 手機一開始就是這個狀態
+        this.resume = () => { this.state = 'running'; return Promise.resolve(); };
         this.createOscillator = () => ({ type: '', frequency: { setValueAtTime() { }, exponentialRampToValueAtTime() { } }, connect: () => ({ connect() { } }), start() { }, stop() { } });
         this.createGain = () => ({ gain: { setValueAtTime() { }, linearRampToValueAtTime() { }, exponentialRampToValueAtTime() { }, value: 0 }, connect: () => ({ connect() { } }) });
         this.createBuffer = (a, n) => ({ getChannelData: () => new Float32Array(n) });
