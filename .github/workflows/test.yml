@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install jsdom --no-save
+      - name: 資料層 + DOM + 乾淨度
+        run: node tools/test.js
+      - name: index.html 與 src/ 沒有走鐘
+        run: |
+          python3 tools/build.py /tmp/rebuilt.html
+          cmp index.html /tmp/rebuilt.html
