@@ -180,8 +180,10 @@ function unlockAudio() {
     acReady = true;
   } catch (e) { }
 }
-['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev =>
-  addEventListener(ev, unlockAudio, { passive: true }));
+// 這支檔案也會被 tools/bake.js 與測試在沒有 DOM 的環境裡載入，所以要防一下
+if (typeof addEventListener === 'function')
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev =>
+    addEventListener(ev, unlockAudio, { passive: true }));
 function tone(f, d, type, vol, slide) {
   if (!S.sfx) return; const c = actx(); if (!c) return;
   const o = c.createOscillator(), g = c.createGain();
