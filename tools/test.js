@@ -34,6 +34,7 @@ function dataCtx() {
   vm.runInContext(core + '\n' + gen + `\n;globalThis.__api={
     generate,tierOf,pickTier,levelPlan,solvableLv,branchProfile,loadPack,decodeLevel,
     dailySeed,hash32,PATTERN30,TIERCUT,TIERRANGE,ONBOARD_LEVELS,SHAPED_EVERY,
+    SHAPENAMES,SHAPEMAX,ONBOARD_SHAPES,shapeCap,
     get P(){return P}};`, ctx);
   return ctx.__api;
 }
@@ -103,6 +104,39 @@ async function testData() {
   ok(cnt[0] / tot > 0.55 && cnt[0] / tot < 0.75,
     `第 31 關之後的分段比例 ${cnt.map(c => (c / tot * 100).toFixed(0)).join(' / ')} %`);
   ok(A.ONBOARD_LEVELS === 30 && A.SHAPED_EVERY === 5, '新手期 30 關、每 5 關一個圖形關');
+
+  head('圖形關：排得到、夠多樣、不超尺寸');
+  /* 這一段是為了擋住一個真的發生過的迴歸：原本的作法是「抽一個圖形，裝不下就退回矩形」，
+     結果 5 的倍數關有四分之一根本沒圖形，而且稀疏的圖形幾乎永遠抽不到 ——
+     出現次數最多的圖形是最少的十倍。下面三項分別盯這三件事。 */
+  const shapedN = [];
+  let noShape = [], useCnt = {}, maxSide = 0;
+  for (let lvn = 10; lvn <= 900; lvn += 5) {
+    const p = A.levelPlan(lvn);
+    if (!p.shape) { noShape.push(lvn); continue; }
+    shapedN.push(lvn);
+    useCnt[p.shape] = (useCnt[p.shape] || 0) + 1;
+    if (p.cols > maxSide) maxSide = p.cols;
+    if (p.cols !== p.rows) noShape.push(-lvn);            // 圖形關一定是正方形
+  }
+  ok(noShape.length === 0, '第 10 關之後每個 5 的倍數關都排到圖形、而且是正方形',
+    noShape.slice(0, 5).join(','));
+  const used = Object.keys(useCnt).length, hits = Object.values(useCnt);
+  ok(used >= Math.ceil(A.SHAPENAMES.length * 0.85),
+    `${shapedN.length} 個圖形關用到 ${used}/${A.SHAPENAMES.length} 個圖形`);
+  ok(Math.max(...hits) <= 4 * (shapedN.length / A.SHAPENAMES.length),
+    `最常出現的圖形只用了 ${Math.max(...hits)} 次，沒有被填充率綁死`,
+    `平均 ${(shapedN.length / A.SHAPENAMES.length).toFixed(1)} 次`);
+  ok(maxSide <= A.SHAPEMAX, `圖形盤面邊長沒超過上限 ${A.SHAPEMAX}`, `實際最大 ${maxSide}`);
+  ok(A.ONBOARD_SHAPES.every(nm => A.SHAPENAMES.indexOf(nm) >= 0),
+    '新手期指定的五個圖形都真的存在', A.ONBOARD_SHAPES.join('/'));
+  let capBad = A.SHAPENAMES.filter(nm => A.shapeCap(nm) < A.TIERRANGE[0][1]);
+  ok(capBad.length === 0, '每個圖形都至少裝得下最小分段的上限格數', capBad.join(','));
+  /* 太密的圖形放大後就只是個圓角方塊，圖形關「密度砍半」的意義會消失
+     —— 漢堡跟皇冠原本都踩到這條線（87%），要靠真正的空洞畫層次才過。 */
+  const area = A.SHAPEMAX * A.SHAPEMAX;
+  const tooSolid = A.SHAPENAMES.filter(nm => A.shapeCap(nm) / area > 0.82);
+  ok(tooSolid.length === 0, '沒有圖形密到跟方形盤面沒兩樣', tooSolid.join(','));
 
   head('關卡包：解碼結果要跟生成器一模一樣');
   await A.loadPack();
@@ -333,13 +367,15 @@ async function testDom() {
   for (const [w, h] of [[360, 640], [390, 844], [430, 932]]) {
     const s = await boot(w, h);
     let bad = 0;
-    for (const lv of [1, 5, 10, 40, 100, 250]) {
+    // 40 / 60 是頂到 SHAPEMAX 的圖形關（全遊戲最大的盤面），一定要一起測
+    const reps = [1, 5, 10, 40, 60, 100, 250];
+    for (const lv of reps) {
       s.win.eval(`go('game'); startLevel(${lv});`);
       for (let i = 0; i < 100 && (!s.win.__MAGO.G || s.win.__MAGO.G.level !== lv); i++) await wait(30);
       const b = s.win.__MAGO.boardBox();
       if (b.w > b.vw + 3 || b.h > b.vh + 3) bad++;
     }
-    ok(bad === 0, `${w}×${h}：6 個代表關開場都整盤看得完`);
+    ok(bad === 0, `${w}×${h}：${reps.length} 個代表關開場都整盤看得完（含最大盤面）`);
   }
 }
 

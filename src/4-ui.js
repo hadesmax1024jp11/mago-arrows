@@ -396,8 +396,8 @@ function howto() {
       <b>8.</b> 難度只看一個數字：<b>所有箭頭佔用的格數總和</b>。
       ${TIERCUT.join(' / ')} 三個門檻切成 ${tiers} 四段，
       跟盤面多大、箭頭幾支、彎幾次都無關。<br>
-      <b>9.</b> 每 5 關安排一個<b>圖形關 ◆</b>（愛心、星星、月亮、幽靈、竹子…）：
-      分段不變但只填一半，是節奏上的減壓閥。<br>
+      <b>9.</b> 每 5 關安排一個<b>圖形關 ◆</b>：盤面排成 ${SHAPENAMES.length} 種圖形之一
+      —— 愛心、熊貓、壽司、城堡、機器人…分段不變但只填一半，是節奏上的減壓閥。<br>
       <b>10.</b> 燈泡是<b>提示</b>，會亮出一支現在走得掉的箭頭並把鏡頭帶過去；
       井字鈕切換格線。<br>
       <span class="mini">關卡是內建生成器產生的，用關卡號當種子 ——
@@ -417,8 +417,9 @@ function howto() {
       <b>8.</b> Difficulty is a single number: <b>the sum of all arrow lengths</b>.
       Cutoffs ${TIERCUT.join(' / ')} split it into ${tiers} —
       board size, arrow count and bends do not matter.<br>
-      <b>9.</b> Every 5th level is a <b>shaped level ◆</b> — same tier, half the visual
-      density: a pressure valve.<br>
+      <b>9.</b> Every 5th level is a <b>shaped level ◆</b> — the board takes one of
+      ${SHAPENAMES.length} shapes (heart, panda, sushi, castle, robot…). Same tier,
+      half the visual density: a pressure valve.<br>
       <b>10.</b> The bulb is the <b>hint</b>; the grid button toggles the grid lines.<br>
       <span class="mini">Levels come from the built-in generator, seeded by the level number —
       <b>level N is the same board for everyone</b>, and the way it is built guarantees a
