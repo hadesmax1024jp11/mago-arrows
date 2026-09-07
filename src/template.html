@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>馬哥箭頭逃脫 · Mago Arrows</title>
+<meta name="description" content="一款單檔、離線可玩的箭頭邏輯解謎遊戲。點一下箭頭，它就沿自己的軌道衝出棋盤 —— 前提是前方那條直線完全淨空。">
+<meta name="theme-color" content="#3F7D4E">
+<style>
+/* ============================================================================
+   馬哥箭頭逃脫 —— 宣紙／竹綠／金 的自有配色，六組主題
+   ========================================================================== */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --paper:#F8F6F0; --paper2:#F0EDE2; --panel:#FFFFFF; --edge:#E3DFCF;
+  --dot:#D8D3C1; --grid:#EBE7D9; --cell:#EDE9DB;
+  --ink:#2A3326; --ink2:#6B7264; --ink3:#A3A797;
+  --arrow:#2A3326; --key:#3F7D4E; --keyD:#2F6039; --keyL:#E7F0E5;
+  --err:#D8503F; --gold:#E0A82E;
+  --t0:#5EA06E; --t1:#E0A82E; --t2:#D9772F; --t3:#C0433A;
+  --shadow:rgba(58,52,34,.12); --desk:#E4E1D6;
+  --appW:430px; --appR:2.1667;
+}
+html[data-theme="bamboo"]{
+  --paper:#F3F7F0; --paper2:#E8F0E4; --panel:#FFFFFF; --edge:#D5E3CF;
+  --dot:#C8DCC2; --grid:#E0EBDB; --cell:#E1EEDC; --keyL:#E0F0DE;
+  --ink:#1F3324; --ink2:#5B7160; --ink3:#94A897;
+  --arrow:#1F3324; --key:#2F8B57; --keyD:#226B42; --desk:#D9E6D4;
+}
+html[data-theme="roast"]{
+  --paper:#F5EFE4; --paper2:#EBE2D2; --panel:#FCF8F1; --edge:#DCCFB8;
+  --dot:#D2C3A7; --grid:#E6DCC8; --cell:#E7DCC7; --keyL:#F1E5D2;
+  --ink:#3A2A1B; --ink2:#7C6650; --ink3:#B0A08A;
+  --arrow:#3A2A1B; --key:#B4712C; --keyD:#8E5620; --desk:#E3D8C4;
+}
+html[data-theme="night"]{
+  --paper:#15201B; --paper2:#1C2B23; --panel:#1C2B23; --edge:#2A3D31;
+  --dot:#31473A; --grid:#233428; --cell:#243629; --keyL:#1E3E2C;
+  --ink:#EAF2E7; --ink2:#9BB0A2; --ink3:#6E8377;
+  --arrow:#EAF2E7; --key:#4FB07A; --keyD:#38885C;
+  --shadow:rgba(0,0,0,.45); --desk:#0B120E;
+}
+html[data-theme="ink"]{
+  --paper:#141414; --paper2:#1C1C1C; --panel:#1C1C1C; --edge:#2C2C2C;
+  --dot:#343434; --grid:#242424; --cell:#262626; --keyL:#2A2A2A;
+  --ink:#F2F0EA; --ink2:#A6A49C; --ink3:#71706A;
+  --arrow:#F2F0EA; --key:#C9A227; --keyD:#9E7D18;
+  --shadow:rgba(0,0,0,.5); --desk:#000000;
+}
+html[data-theme="plum"]{
+  --paper:#221A26; --paper2:#2C2131; --panel:#2C2131; --edge:#3B2D42;
+  --dot:#48364F; --grid:#312537; --cell:#372840; --keyL:#3A2748;
+  --ink:#F5EAF3; --ink2:#BBA3C0; --ink3:#8A7490;
+  --arrow:#F5EAF3; --key:#C56C9B; --keyD:#A24E7C;
+  --shadow:rgba(0,0,0,.45); --desk:#150F18;
+}
+html,body{height:100%;height:100dvh;overflow:hidden}
+body{
+  font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+  background:var(--desk);color:var(--ink);user-select:none;-webkit-user-select:none;
+  display:grid;place-items:center;transition:background .3s}
+#app{position:relative;overflow:hidden;container-type:inline-size;
+  width:min(100vw,var(--appW));
+  height:min(100%,calc(min(100vw,var(--appW))*var(--appR)));
+  max-height:100%;
+  background:radial-gradient(120% 90% at 50% 0%,var(--paper) 0%,var(--paper2) 100%);
+  transition:background .3s}
+@media (min-width:520px) and (min-height:600px){
+  #app{border-radius:38px;box-shadow:0 26px 60px rgba(40,36,22,.3),0 0 0 1px var(--edge)}
+}
+#fx{position:absolute;inset:0;pointer-events:none;z-index:60}
+.leaf{position:absolute;pointer-events:none;opacity:.06;z-index:0;color:var(--key)}
+
+.screen{position:absolute;inset:0;display:none;flex-direction:column;z-index:2}
+.screen.on{display:flex;animation:fade .3s ease both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+
+/* ---------------- Logo：竹綠圓角章 + 白箭頭 ---------------- */
+.logo{display:flex;align-items:center;gap:9px}
+.logo .mk{width:38px;height:38px;border-radius:12px;background:var(--key);display:grid;place-items:center;
+  box-shadow:0 3px 0 var(--keyD)}
+.logo .mk svg{display:block}
+.logo b{font-size:17px;font-weight:900;letter-spacing:.02em}
+.logo.big .mk{width:54px;height:54px;border-radius:17px}
+
+/* ---------------- 通用元件 ---------------- */
+.btn{border:none;cursor:pointer;font:inherit;font-weight:800;color:#fff;background:var(--key);
+  padding:15px 44px;border-radius:99px;font-size:18px;letter-spacing:.02em;
+  box-shadow:0 4px 0 var(--keyD);transition:transform .07s,box-shadow .07s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--keyD)}
+.btn.ghost{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1.6px var(--edge)}
+.btn.ghost:active{transform:translateY(2px);box-shadow:0 0 0 1.6px var(--edge)}
+.btn.sm{padding:11px 24px;font-size:15px}
+.btn.wide{width:100%}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.iconbtn{width:42px;height:42px;flex:0 0 auto;border-radius:50%;border:none;background:var(--cell);
+  cursor:pointer;display:grid;place-items:center;color:var(--ink);transition:transform .08s}
+.iconbtn:active{transform:scale(.9)}
+.iconbtn.on{background:var(--key);color:#fff}
+.iconbtn.badge{position:relative}
+.iconbtn.badge b{position:absolute;right:-3px;top:-3px;background:var(--key);color:#fff;font-size:10px;
+  min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;font-weight:900;
+  padding:0 4px;box-shadow:0 0 0 2.5px var(--paper)}
+.iconbtn.tiny{width:32px;height:32px}
+.iconbtn.tiny svg{width:16px;height:16px}
+.chip{background:var(--cell);border-radius:99px;padding:7px 14px;font-weight:800;font-size:14px;color:var(--ink)}
+.chip.diff{color:#fff;font-size:12.5px;letter-spacing:.02em;padding:8px 13px}
+.h2{font-size:23px;font-weight:900}
+.sub{color:var(--ink2);font-size:13px;line-height:1.6}
+.topbar{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex:0 0 auto}
+.topbar .ttl{font-size:19px;font-weight:900;flex:1;text-align:center}
+.spacer{flex:1}
+.bar{height:7px;border-radius:99px;background:var(--cell);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--key);transition:width .35s}
+
+/* ---------------- 首頁 ---------------- */
+#home{align-items:center;padding:0 22px calc(20px + env(safe-area-inset-bottom))}
+#home .top{padding-top:calc(26px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center}
+#home h1{font-size:clamp(28px,8.6cqw,42px);font-weight:900;line-height:1.05;text-align:center;margin-top:12px}
+#home .tag{color:var(--ink3);font-size:11px;letter-spacing:.3em;text-align:center;margin-top:6px}
+.hero{width:min(46cqw,200px);max-height:25vh;object-fit:contain;display:block;margin:8px auto 0;
+  filter:drop-shadow(0 14px 18px rgba(58,52,34,.22));animation:bob 3.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-.7deg)}50%{transform:translateY(-10px) rotate(.7deg)}}
+.homebtns{width:100%;display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:auto}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;margin-top:4px}
+.tile{background:var(--panel);border-radius:20px;padding:13px 14px;text-align:left;cursor:pointer;
+  border:none;font:inherit;color:var(--ink);position:relative;transition:transform .08s;
+  box-shadow:0 2px 0 var(--edge)}
+.tile:active{transform:scale(.975)}
+.tile b{display:block;font-size:15px;font-weight:900}
+.tile span{display:block;font-size:11px;color:var(--ink2);margin-top:2px;font-weight:700}
+.tile.off,.tile.off b{color:var(--ink3)}
+.stats{display:flex;gap:20px;justify-content:center;color:var(--ink3);font-size:11px;font-weight:800;margin-top:14px}
+.stats b{display:block;color:var(--ink);font-size:19px;font-weight:900}
+
+/* ---------------- 關卡地圖 ---------------- */
+#map .scroll{padding:4px 0 calc(26px + env(safe-area-inset-bottom))}
+.mapwrap{position:relative;padding:14px 0}
+.mapline{position:absolute;left:50%;top:0;bottom:0;width:3px;margin-left:-1.5px;
+  background:repeating-linear-gradient(180deg,var(--edge) 0 7px,transparent 7px 15px)}
+.node{position:relative;display:flex;align-items:center;height:64px;justify-content:center}
+.node .nd{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:900;
+  font-size:17px;color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.16);cursor:pointer;position:relative;z-index:1}
+.node .nd.locked{background:var(--cell);color:var(--ink3);box-shadow:none;cursor:default}
+.node .nd.cur{outline:3.5px solid var(--paper);box-shadow:0 0 0 6px var(--key),0 3px 0 rgba(0,0,0,.16);
+  animation:pulse 1.7s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.node .side{position:absolute;font-size:11px;font-weight:800;color:var(--ink2);white-space:nowrap}
+.node .side.l{right:calc(50% + 42px);text-align:right}
+.node .side.r{left:calc(50% + 42px)}
+.node .shp{position:absolute;left:50%;margin-left:14px;top:6px;font-size:12px;color:var(--gold)}
+.node .stars{position:absolute;left:50%;transform:translateX(-50%);bottom:2px;display:flex;gap:1.5px}
+.node .stars i{width:6px;height:6px;border-radius:50%;background:var(--gold);display:block}
+.node .stars i.off{background:var(--edge)}
+.node.big .nd{width:62px;height:62px;font-size:19px}
+.mapfoot{text-align:center;color:var(--ink3);font-size:12px;font-weight:700;padding:10px 0 0}
+
+/* ---------------- 遊戲畫面 ---------------- */
+#game{padding:calc(9px + env(safe-area-inset-top)) 11px calc(8px + env(safe-area-inset-bottom))}
+.hud{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.hearts{display:flex;gap:2px;align-items:center}
+.heart{width:19px;height:19px;transition:transform .25s,opacity .25s}
+.heart.gone{opacity:.22;transform:scale(.7)}
+.heart.pulse{animation:hpop .45s ease}
+@keyframes hpop{0%{transform:scale(1)}35%{transform:scale(1.45) rotate(-12deg)}100%{transform:scale(.7)}}
+.progrow{display:flex;align-items:center;gap:6px;margin:8px 2px 0;flex:0 0 auto}
+.progwrap{flex:1;height:5px;background:var(--cell);border-radius:99px;overflow:hidden}
+.progbar{height:100%;width:0;border-radius:99px;background:var(--key);transition:width .3s}
+#boardWrap{flex:1;position:relative;min-height:0;overflow:hidden;touch-action:none}
+#boardWrap.pannable{cursor:grab}
+#boardWrap.panning{cursor:grabbing}
+#boardPanel{position:absolute;left:0;top:0;transform-origin:0 0;padding:10px;
+  background:var(--panel);border-radius:22px;box-shadow:0 6px 20px var(--shadow)}
+#board{position:relative}
+#gridc,#dots{position:absolute;inset:0;pointer-events:none}
+#pieces{position:absolute;left:0;top:0;overflow:visible}
+.pc .hit{fill:none;stroke:transparent;pointer-events:stroke;cursor:pointer}
+.pc .ln{fill:none;stroke:var(--arrow);stroke-linecap:butt;stroke-linejoin:round;pointer-events:none}
+.pc .hd{fill:var(--arrow);stroke:none;pointer-events:none}
+.pc.bad .ln{stroke:var(--err)} .pc.bad .hd{fill:var(--err)}
+.pc.tip .ln{stroke:var(--key)} .pc.tip .hd{fill:var(--key)}
+.pc.sel .ln{stroke:var(--key)} .pc.sel .hd{fill:var(--key)}
+.pc.tip{animation:tip 1s ease-in-out infinite}
+@keyframes tip{0%,100%{opacity:1}50%{opacity:.4}}
+#guide{position:absolute;inset:0;pointer-events:none}
+.pathdot{position:absolute;border-radius:50%;background:var(--key);opacity:.28;pointer-events:none}
+.blockx{position:absolute;pointer-events:none;color:var(--err);display:grid;place-items:center;font-weight:900}
+#praise{position:absolute;left:0;right:0;top:36%;text-align:center;font-size:26px;font-weight:900;
+  color:var(--ink);opacity:0;pointer-events:none;z-index:8}
+#praise.on{animation:praise 1.15s ease-out both}
+@keyframes praise{0%{opacity:0;transform:scale(.6)}22%{opacity:1;transform:scale(1.08)}
+  70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1) translateY(-18px)}}
+#toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:9;
+  background:var(--keyL);color:var(--key);font-weight:800;font-size:12.5px;
+  padding:8px 15px;border-radius:99px;opacity:0;transition:opacity .28s;pointer-events:none;
+  max-width:92%;text-align:center}
+#toast.on{opacity:1}
+#combo{position:absolute;right:12px;bottom:12px;font-weight:900;font-size:14px;color:var(--key);
+  opacity:0;transition:opacity .25s;pointer-events:none;z-index:5}
+#combo.on{opacity:1}
+.float{position:absolute;pointer-events:none;font-weight:900;z-index:70;animation:floatUp .9s ease-out forwards}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,0) scale(.7)}
+  25%{opacity:1;transform:translate(-50%,-13px) scale(1.12)}
+  100%{opacity:0;transform:translate(-50%,-58px) scale(1)}}
+
+/* ---------------- 馬哥 ---------------- */
+#mascot{position:absolute;pointer-events:none;z-index:6;opacity:0;
+  transition:opacity .3s ease,transform .46s cubic-bezier(.2,1.35,.4,1)}
+#mascot.on{opacity:1}
+#mascot img{display:block;width:100%;height:auto;
+  filter:drop-shadow(0 7px 11px rgba(58,52,34,.26));animation:msbob 1.6s ease-in-out infinite}
+@keyframes msbob{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-6px) rotate(1.5deg)}}
+#mascot.flip img{animation-name:msbobF}
+@keyframes msbobF{0%,100%{transform:scaleX(-1) translateY(0) rotate(1.5deg)}50%{transform:scaleX(-1) translateY(-6px) rotate(-1.5deg)}}
+.mbub{position:absolute;white-space:nowrap;box-sizing:border-box;background:var(--panel);
+  border:1.6px solid var(--edge);border-radius:15px;padding:7px 12px;font-size:13px;font-weight:800;
+  line-height:1.35;color:var(--ink);box-shadow:0 5px 12px var(--shadow);
+  animation:bubIn .3s cubic-bezier(.2,1.6,.4,1) both}
+.mbub::after{content:"";position:absolute;width:11px;height:11px;background:var(--panel);transform:rotate(45deg)}
+.mbub.t-d::after{bottom:-6.5px;left:17px;border-right:1.6px solid var(--edge);border-bottom:1.6px solid var(--edge)}
+.mbub.t-l::after{left:-6.5px;top:11px;border-left:1.6px solid var(--edge);border-bottom:1.6px solid var(--edge)}
+.mbub.t-r::after{right:-6.5px;top:11px;border-right:1.6px solid var(--edge);border-top:1.6px solid var(--edge)}
+@keyframes bubIn{from{opacity:0;transform:scale(.62)}to{opacity:1;transform:none}}
+
+/* ---------------- 每日一關 ---------------- */
+.cal{padding:0 18px}
+.calhead{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0 12px}
+.calhead b{font-size:17px;font-weight:900;color:var(--key);min-width:132px;text-align:center}
+.calnav{width:32px;height:32px;border-radius:50%;border:none;background:var(--cell);color:var(--ink);
+  cursor:pointer;display:grid;place-items:center;font-size:17px}
+.calnav[disabled]{opacity:.3;pointer-events:none}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+.calgrid .dow{font-size:11px;font-weight:800;color:var(--ink3);padding-bottom:3px}
+.day{aspect-ratio:1;border-radius:11px;background:var(--cell);display:grid;place-items:center;
+  font-size:13px;font-weight:800;color:var(--ink2);cursor:pointer;position:relative}
+.day.blank{background:transparent;cursor:default}
+.day.future{opacity:.4;cursor:default}
+.day.done{background:var(--key);color:#fff}
+.day.today{box-shadow:0 0 0 2.2px var(--key)}
+.day.done::after{content:"";position:absolute;right:3px;bottom:3px;width:5px;height:5px;border-radius:50%;background:#fff}
+.calbar{display:flex;align-items:center;gap:9px;margin:2px 0 14px;font-size:11px;font-weight:800;color:var(--ink3)}
+.calbar .bar{flex:1}
+.calbar .n{width:22px;height:22px;border-radius:50%;background:var(--t0);color:#fff;display:grid;place-items:center;font-size:11px}
+.cd{text-align:center;color:var(--ink2);font-size:12px;font-weight:800;margin-top:12px}
+
+/* ---------------- 成就 / 週榜 ---------------- */
+.awlist,.lglist{padding:0 16px calc(24px + env(safe-area-inset-bottom))}
+.aw{display:flex;gap:12px;align-items:center;background:var(--panel);border-radius:18px;padding:12px 14px;
+  margin-bottom:8px;box-shadow:0 2px 0 var(--edge)}
+.aw .ic{width:42px;height:42px;flex:0 0 auto;border-radius:13px;background:var(--keyL);display:grid;place-items:center;font-size:20px}
+.aw.done .ic{background:var(--t0);color:#fff}
+.aw .tx{flex:1;min-width:0}
+.aw .tx b{display:block;font-size:14px;font-weight:900}
+.aw .tx span{display:block;font-size:11px;color:var(--ink2);font-weight:700;margin:2px 0 5px}
+.aw .n{font-size:11px;font-weight:900;color:var(--ink3);flex:0 0 auto}
+.lgrow{display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:15px;margin-bottom:5px;
+  background:var(--panel);box-shadow:0 2px 0 var(--edge)}
+.lgrow.me{background:var(--keyL);box-shadow:inset 0 0 0 1.6px var(--key)}
+.lgrow.up{background:linear-gradient(90deg,var(--keyL),var(--panel))}
+.lgrow .r{width:26px;font-weight:900;font-size:14px;color:var(--ink2);text-align:center;flex:0 0 auto}
+.lgrow .nm{flex:1;font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lgrow .sc{font-weight:900;font-size:14px}
+.lgtitle{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 12px}
+.zone{font-size:10.5px;font-weight:900;color:var(--t0);letter-spacing:.06em;padding:8px 16px 4px}
+
+/* ---------------- 彈窗 ---------------- */
+#modal{position:fixed;inset:0;background:rgba(34,30,18,.45);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:80;padding:22px}
+#modal.on{display:flex;animation:fade .22s ease both}
+.card{background:var(--panel);border-radius:28px;padding:24px 22px 20px;text-align:center;
+  max-width:344px;width:100%;max-height:88vh;overflow-y:auto;
+  box-shadow:0 22px 46px rgba(34,30,18,.3);animation:pop .34s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes pop{from{transform:scale(.84) translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.card img.pm{width:104px;max-height:130px;object-fit:contain;margin:-4px auto 2px;display:block;
+  filter:drop-shadow(0 9px 12px rgba(58,52,34,.24))}
+.card h2{font-size:24px;font-weight:900;margin-bottom:3px}
+.card p{color:var(--ink2);font-size:13.5px;line-height:1.6;margin-bottom:14px}
+.stars{display:flex;gap:7px;justify-content:center;margin:6px 0 10px}
+.stars svg{width:33px;height:33px;animation:starIn .45s cubic-bezier(.2,1.6,.4,1) both}
+.stars svg:nth-child(2){animation-delay:.11s}
+.stars svg:nth-child(3){animation-delay:.22s}
+.stars .off{opacity:.2}
+@keyframes starIn{from{transform:scale(0) rotate(-70deg)}to{transform:none}}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:2px 0 15px}
+.kv div{background:var(--paper2);border-radius:14px;padding:9px 6px}
+.kv small{display:block;font-size:10px;color:var(--ink3);font-weight:800;letter-spacing:.04em}
+.kv b{display:block;font-size:16px;font-weight:900;margin-top:1px}
+.cardbtns{display:flex;flex-direction:column;gap:8px}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 2px;
+  border-bottom:1px solid var(--edge);font-size:14.5px;font-weight:800;text-align:left}
+.setrow:last-of-type{border-bottom:none}
+.setrow .sd{font-size:11px;color:var(--ink2);font-weight:700;margin-top:2px}
+.sw{width:48px;height:28px;border-radius:99px;background:var(--cell);position:relative;cursor:pointer;
+  flex:0 0 auto;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+  background:#fff;box-shadow:0 1.5px 4px rgba(0,0,0,.22);transition:transform .2s}
+.sw.on{background:var(--key)}
+.sw.on::after{transform:translateX(20px)}
+.seg{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.seg button{border:none;font:inherit;font-weight:800;font-size:11.5px;padding:6px 10px;border-radius:99px;
+  background:var(--cell);color:var(--ink2);cursor:pointer}
+.seg button.on{background:var(--key);color:#fff}
+.tut{background:var(--paper2);border-radius:16px;padding:13px 14px;text-align:left;font-size:13px;
+  line-height:1.72;color:var(--ink2);margin-bottom:13px}
+.tut b{color:var(--ink)}
+.tut .mini{font-size:11.5px;color:var(--ink3)}
+
+/* ---------------- 載入 / 生成中 ---------------- */
+#splash,#gen{position:absolute;inset:0;display:grid;place-items:center;z-index:90;background:var(--paper)}
+#splash.off,#gen.off{display:none}
+#gen{background:rgba(248,246,240,.86);z-index:75}
+html[data-theme="night"] #gen,html[data-theme="ink"] #gen,html[data-theme="plum"] #gen{background:rgba(20,20,20,.8)}
+#splash .lt,#gen .lt{margin-top:14px;color:var(--ink3);font-size:12px;font-weight:800;letter-spacing:.12em;text-align:center}
+.spin{width:26px;height:26px;margin:0 auto;border-radius:50%;border:3px solid var(--edge);
+  border-top-color:var(--key);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}
+</style>
+</head>
+<body>
+<div id="app">
+<canvas id="fx"></canvas>
+
+<!-- ============================ 首頁 ============================ -->
+<section id="home" class="screen">
+  <div class="top">
+    <div class="logo big">
+      <div class="mk"><svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="#fff"
+        stroke-width="3.4" stroke-linecap="square" stroke-linejoin="miter">
+        <path d="M6 26V13h13"/><path d="M14 8l6 5-6 5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+    <h1 id="hTitle">馬哥箭頭逃脫</h1>
+    <div class="tag">M A G O &nbsp; A R R O W S</div>
+  </div>
+  <img class="hero" id="heroImg" alt="馬哥">
+  <div class="homebtns">
+    <button class="btn wide" id="btnPlay">開始遊戲</button>
+    <div class="tiles">
+      <button class="tile" id="tMap"><b id="tMapT">關卡</b><span id="tMapS">第 1 關</span></button>
+      <button class="tile" id="tDaily"><b id="tDailyT">每日一關</b><span id="tDailyS">—</span></button>
+      <button class="tile" id="tAward"><b id="tAwardT">成就</b><span id="tAwardS">—</span></button>
+      <button class="tile" id="tLeague"><b id="tLeagueT">週榜</b><span id="tLeagueS">—</span></button>
+    </div>
+    <div class="stats">
+      <div id="sLvW">關卡<b id="stLv">1</b></div>
+      <div id="sScW">分數<b id="stSc">0</b></div>
+      <div id="sCbW">連擊<b id="stCb">0</b></div>
+      <div id="sArW">箭頭<b id="stAr">0</b></div>
+    </div>
+    <div style="display:flex;gap:9px;margin-top:12px">
+      <button class="btn ghost sm" id="btnHow">怎麼玩</button>
+      <button class="btn ghost sm" id="btnSet">設定</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 關卡地圖 ============================ -->
+<section id="map" class="screen">
+  <div class="topbar">
+    <button class="iconbtn" data-back="home">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="ttl" id="mapTtl">關卡</div>
+    <button class="iconbtn" id="mapJump" title="回到目前關卡">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button>
+  </div>
+  <div class="scroll" id="mapScroll"><div class="mapwrap" id="mapWrap"><div class="mapline"></div></div>
+    <div class="mapfoot" id="mapFoot"></div></div>
+</section>
+
+<!-- ============================ 遊戲 ============================ -->
+<section id="game" class="screen">
+  <div class="hud">
+    <button class="iconbtn" id="btnBack">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="chip" id="lvChip">第 1 關</div>
+    <div class="chip diff" id="diffChip">悠閒</div>
+    <div class="spacer"></div>
+    <div class="chip" style="padding:6px 10px"><div class="hearts" id="hearts"></div></div>
+    <button class="iconbtn badge" id="btnHint" title="提示">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.5.4.8 1 .8 1.6v.5h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0012 3z"/></svg>
+      <b id="hintN">3</b></button>
+  </div>
+  <div class="progrow">
+    <div class="progwrap"><div class="progbar" id="prog"></div></div>
+    <button class="iconbtn tiny" id="btnGrid" title="格線">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round"><path d="M4 9h16M4 15h16M9 4v16M15 4v16"/></svg></button>
+    <button class="iconbtn tiny" id="btnFit" title="整盤 / 放大">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="iconbtn tiny" id="btnRestart" title="重來">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8 8 0 106.3 6.3M20 4v6h-6"/></svg></button>
+  </div>
+  <div id="boardWrap">
+    <div id="boardPanel"><div id="board">
+      <canvas id="gridc"></canvas>
+      <canvas id="dots"></canvas>
+      <svg id="pieces" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="guide"></div>
+    </div></div>
+    <div id="mascot"><div class="mbub t-d" id="mbub"></div><img id="mimg" alt="馬哥"></div>
+    <div id="praise"></div>
+    <div id="combo"></div>
+    <div id="toast"></div>
+  </div>
+</section>
+
+<!-- ============================ 每日一關 ============================ -->
+<section id="daily" class="screen">
+  <div class="topbar">
+    <button class="iconbtn" data-back="home">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="ttl" id="dailyTtl">每日一關</div>
+    <div style="width:42px"></div>
+  </div>
+  <div class="scroll"><div class="cal" id="calBody"></div></div>
+</section>
+
+<!-- ============================ 成就 ============================ -->
+<section id="awards" class="screen">
+  <div class="topbar">
+    <button class="iconbtn" data-back="home">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="ttl" id="awTtl">成就</div>
+    <div style="width:42px"></div>
+  </div>
+  <div class="scroll"><div class="awlist" id="awBody"></div></div>
+</section>
+
+<!-- ============================ 週榜 ============================ -->
+<section id="leagues" class="screen">
+  <div class="topbar">
+    <button class="iconbtn" data-back="home">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="ttl" id="lgTtl">週榜</div>
+    <div style="width:42px"></div>
+  </div>
+  <div class="lgtitle"><div class="sub" id="lgSub"></div><div class="chip" id="lgTop">—</div></div>
+  <div class="scroll"><div class="lglist" id="lgBody"></div></div>
+</section>
+
+<div id="gen" class="off"><div><div class="spin"></div><div class="lt" id="genTxt">生成關卡中…</div></div></div>
+<div id="splash">
+  <div>
+    <div class="logo big" style="justify-content:center">
+      <div class="mk"><svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="#fff"
+        stroke-width="3.4" stroke-linecap="square" stroke-linejoin="miter">
+        <path d="M6 26V13h13"/><path d="M14 8l6 5-6 5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="lt" id="splashTxt">載入中…</div>
+  </div>
+</div>
+</div>
+<div id="modal"><div class="card" id="cardBody"></div></div>
+<script>
+/* ============================================================================
+   馬哥箭頭逃脫 · Mago Arrows
+   單檔、離線、無外部資源。關卡由內建的決定性生成器產生（前 N 關在建置時烘焙好），
+   每一關都由「逆向建構法」保證有解。原始碼與說明見同 repo 的 README。
+   ========================================================================== */
+const SPRITES = __SPRITES_JSON__;
+const PACK_B64 = "__PACK_B64__";
+</script>
+<script>
+__GAME_JS__
+</script>
+</body>
+</html>

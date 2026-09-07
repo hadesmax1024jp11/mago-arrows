@@ -1,0 +1,17 @@
+{
+  "name": "mago-arrows",
+  "version": "1.0.0",
+  "description": "馬哥箭頭逃脫 — a single-file, offline arrow-escape puzzle game with a deterministic level generator",
+  "private": true,
+  "scripts": {
+    "bake": "node tools/bake.js 300 14",
+    "build": "python3 tools/build.py",
+    "test": "node tools/test.js",
+    "test:data": "node tools/test.js data",
+    "test:dom": "node tools/test.js dom"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  },
+  "license": "MIT"
+}
