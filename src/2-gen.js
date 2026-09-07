@@ -219,6 +219,25 @@ const SHAPES = {
 const SHAPENAMES = Object.keys(SHAPES);
 /* 新手期只有 5 個圖形關（10/15/20/25/30），挑最好辨識的五個當第一印象 */
 const ONBOARD_SHAPES = ['Heart', 'Star', 'Panda', 'CatFace', 'Rocket'];
+/* 開場卡要顯示這一關是什麼圖形，所以每個圖形要有中英名字 */
+const SHAPELABEL = {
+  Heart: ['愛心', 'Heart'], Star: ['星星', 'Star'], Moon: ['月亮', 'Moon'],
+  Ghost: ['幽靈', 'Ghost'], Bamboo: ['竹子', 'Bamboo'], Panda: ['熊貓', 'Panda'],
+  Cloud: ['雲', 'Cloud'], Coin: ['錢幣', 'Coin'],
+  Maki: ['壽司捲', 'Sushi roll'], Ramen: ['拉麵', 'Ramen'], Donut: ['甜甜圈', 'Donut'],
+  Pineapple: ['鳳梨', 'Pineapple'], IceCream: ['冰淇淋', 'Ice cream'], Burger: ['漢堡', 'Burger'],
+  Cake: ['蛋糕', 'Cake'], Strawberry: ['草莓', 'Strawberry'], Mushroom: ['蘑菇', 'Mushroom'],
+  BubbleTea: ['珍奶', 'Bubble tea'],
+  Castle: ['城堡', 'Castle'], Tower: ['鐵塔', 'Tower'], Pagoda: ['寶塔', 'Pagoda'],
+  House: ['房子', 'House'], Rocket: ['火箭', 'Rocket'], Sailboat: ['帆船', 'Sailboat'],
+  Windmill: ['風車', 'Windmill'], Bridge: ['拱橋', 'Bridge'],
+  Robot: ['機器人', 'Robot'], Ninja: ['忍者', 'Ninja'], CatFace: ['貓臉', 'Cat'],
+  Dino: ['小恐龍', 'Dino'], Alien: ['外星人', 'Alien'], Slime: ['史萊姆', 'Slime'],
+  Knight: ['頭盔', 'Helmet'], Wizard: ['巫師', 'Wizard'], Bunny: ['兔子', 'Bunny'],
+  Bear: ['熊', 'Bear'],
+  Crown: ['皇冠', 'Crown'], Key: ['鑰匙', 'Key'], Diamond: ['鑽石', 'Diamond'],
+  Flower: ['花', 'Flower']
+};
 
 function shapeMask(name, N) {
   const rows = SHAPES[name] || SHAPES.Heart, S = rows.length;

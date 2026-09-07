@@ -320,6 +320,47 @@ html[data-theme="night"] #gen,html[data-theme="ink"] #gen,html[data-theme="plum"
 .spin{width:26px;height:26px;margin:0 auto;border-radius:50%;border:3px solid var(--edge);
   border-top-color:var(--key);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(1turn)}}
+
+/* ---------------- 開場卡 ----------------
+   蓋在盤面上但不吃點擊（pointer-events:none）—— 箭頭同時在飛入，
+   萬一動畫被中斷也不會有一層看不見的東西卡住輸入。 */
+#intro{position:absolute;inset:0;z-index:78;display:grid;place-items:center;
+  pointer-events:none;background:rgba(248,246,240,.55);backdrop-filter:blur(2px)}
+html[data-theme="night"] #intro,html[data-theme="ink"] #intro,html[data-theme="plum"] #intro{
+  background:rgba(20,20,20,.5)}
+#intro.off{display:none}
+#intro .ib{text-align:center;animation:introIn .5s cubic-bezier(.16,1,.3,1) both}
+#intro.out .ib{animation:introOut .34s ease-in both}
+.ilv{font-size:40px;font-weight:900;color:var(--ink);letter-spacing:-.01em;line-height:1.1}
+.itier{margin-top:4px;font-size:15px;font-weight:900;letter-spacing:.06em}
+.imeta{margin-top:3px;font-size:12px;font-weight:800;color:var(--ink3);letter-spacing:.04em}
+@keyframes introIn{0%{opacity:0;transform:scale(.86) translateY(10px)}
+  100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes introOut{to{opacity:0;transform:scale(1.1)}}
+
+/* ---------------- 過關慶祝 ----------------
+   z-index 疊法：生成中 75 < 開場卡 78 < 慶祝 79 < 彈窗 80 < 載入 90。
+   慶祝一定要在彈窗之下 —— 萬一兩者同時出現（例如慶祝中途按到什麼），
+   要讓玩家看得到可以按的彈窗，而不是被一層不吃點擊的動畫蓋住。 */
+#celebrate{position:absolute;inset:0;z-index:79;display:grid;place-items:center;
+  pointer-events:none;background:rgba(248,246,240,.5);backdrop-filter:blur(2px)}
+html[data-theme="night"] #celebrate,html[data-theme="ink"] #celebrate,
+html[data-theme="plum"] #celebrate{background:rgba(20,20,20,.46)}
+#celebrate.off{display:none}
+#celebrate .cb{text-align:center}
+.cmago{width:96px;max-height:118px;object-fit:contain;display:block;margin:0 auto 2px;
+  animation:cmagoIn .62s cubic-bezier(.2,1.5,.4,1) both}
+.cbig{font-size:34px;font-weight:900;color:var(--ink);letter-spacing:-.01em;
+  animation:cbigIn .5s cubic-bezier(.16,1.4,.3,1) both .1s}
+.cstars{margin-top:8px;display:flex;gap:9px;justify-content:center}
+.cstars span{font-size:34px;line-height:1;opacity:0;transform:scale(2.4) rotate(-22deg);
+  animation:cstamp .42s cubic-bezier(.2,1.6,.35,1) both}
+.cstars span.dim{filter:grayscale(1);opacity:.26!important}
+@keyframes cmagoIn{0%{opacity:0;transform:translateY(34px) scale(.7)}
+  100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes cbigIn{0%{opacity:0;transform:scale(.6)}100%{opacity:1;transform:scale(1)}}
+@keyframes cstamp{0%{opacity:0;transform:scale(2.4) rotate(-22deg)}
+  70%{opacity:1;transform:scale(.92) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
 </style>
 </head>
 <body>
@@ -453,6 +494,16 @@ html[data-theme="night"] #gen,html[data-theme="ink"] #gen,html[data-theme="plum"
 </section>
 
 <div id="gen" class="off"><div><div class="spin"></div><div class="lt" id="genTxt">生成關卡中…</div></div></div>
+<div id="intro" class="off"><div class="ib">
+  <div class="ilv" id="iLv"></div>
+  <div class="itier" id="iTier"></div>
+  <div class="imeta" id="iMeta"></div>
+</div></div>
+<div id="celebrate" class="off"><div class="cb">
+  <img class="cmago" id="cMago" alt="">
+  <div class="cbig" id="cBig"></div>
+  <div class="cstars" id="cStars"></div>
+</div></div>
 <div id="splash">
   <div>
     <div class="logo big" style="justify-content:center">
@@ -505,7 +556,7 @@ const TIERNAME = {
 /* 版本號與 build 日期由 build.py 從 package.json 注入。
    直接用 node 跑 1-core.js（bake / test）時會留著佔位字串 —— 只影響顯示，不影響邏輯。
    會想顯示這個是因為 Pages 常被瀏覽器快取，手機上開到舊版時得分得出來。 */
-const VERSION = '1.0.0', BUILT = '2026-09-07';
+const VERSION = '2.0.0', BUILT = '2026-09-07';
 
 const ONBOARD_LEVELS = 30;      // 手排新手期
 const SHAPED_EVERY = 5;         // 每 5 關一個圖形關（減壓閥：分段不變，視覺密度砍半）
@@ -564,6 +615,8 @@ const STR = {
     combo: '連擊', arrows: '箭頭', sounds: '音效', vibr: '震動', themes: '主題', lang: '語言',
     guideS: '輔助線', guideD: '按住箭頭時顯示行進路線', safeS: '誤觸保護',
     safeD: '先點選、再點一次才移動', mascotS: '馬哥加油', mascotD: '讓馬哥在棋盤旁邊探頭喊話',
+    bgmS: '背景音樂', bgmD: '即時合成的環境音，不會重複',
+    lvDaily: '每日一關', clearBig: '恭喜過關',
     autoS: '自動收尾', autoD: '只剩三支時自動放它們出去', reset: '清除進度',
     resetQ: '確定要清除全部進度？', yes: '確定', no: '取消', loading: '生成關卡中…',
     shapedTag: '圖形關', mapFoot: '往下滑看更多關卡', promo: '晉級區', hold: '保留區',
@@ -593,6 +646,8 @@ const STR = {
     guideS: 'Path guide', guideD: 'Show the exit path while holding an arrow',
     safeS: 'Tap protection', safeD: 'Select first, tap again to move',
     mascotS: 'Mago cheers', mascotD: 'Let Mago pop up beside the board',
+    bgmS: 'Music', bgmD: 'Ambient, synthesised live — it never repeats',
+    lvDaily: 'Daily', clearBig: 'Cleared!',
     autoS: 'Auto finish', autoD: 'Clear the last three arrows automatically',
     reset: 'Reset progress', resetQ: 'Delete all progress?', yes: 'Yes', no: 'Cancel',
     loading: 'Building level…', shapedTag: 'Shaped', mapFoot: 'Scroll for more levels',
@@ -613,7 +668,7 @@ const tierName = i => (TIERNAME[typeof S !== 'undefined' ? S.lang : 'zh'] || TIE
 const DEF = {
   cur: 1, maxLv: 1, score: 0, bestCombo: 0, arrowsCleared: 0, misses: 0, clean: 0,
   hints: 3, stars: {}, daily: {}, byTier: [0, 0, 0, 0], weekScore: 0, weekTag: '', playSec: 0,
-  sfx: true, vibr: true, theme: 'paper', lang: 'zh', guide: false, safe: false,
+  sfx: true, bgm: true, vibr: true, theme: 'paper', lang: 'zh', guide: false, safe: false,
   mascot: true, autoFin: false, grid: false, tips: {}
 };
 let S = Object.assign({}, DEF);
@@ -661,6 +716,8 @@ function unlockAudio() {
     src.buffer = b; src.connect(c.destination); src.start(0);
     acReady = true;
   } catch (e) { }
+  // 解鎖成功才可能播得出 BGM（AudioContext 在手勢之前是 suspended）
+  try { BGM.sync(); } catch (e) { }
 }
 // 這支檔案也會被 tools/bake.js 與測試在沒有 DOM 的環境裡載入，所以要防一下
 if (typeof addEventListener === 'function')
@@ -694,6 +751,100 @@ const SFX = {
   ding() { [880, 1175].forEach((f, i) => setTimeout(() => tone(f, .18, 'triangle', .11), i * 80)); }
 };
 const buzz = ms => { if (S.vibr && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { } };
+
+/* ---------- 背景音樂 ----------
+   全程式合成，沒有音檔。塞一首 MP3 進來（base64 之後 1.5 MB 以上）會直接毀掉
+   「單檔、離線、380 kB」這件事，所以改成即時生成的極簡環境音：
+     底層　兩個微微離調的三角波和聲墊，每 8 秒換一個和弦，慢起音慢收
+     上層　小調五聲音階的稀疏音符，音高與時間點都是隨機的
+   用五聲音階的理由：沒有半音衝突，所以隨機取音永遠不會刺耳 —— 也永遠不重複，
+   不會有循環樂句聽久了發膩的問題。
+
+   排程用 lookahead 而不是 setTimeout 逐音觸發：每 250 ms 醒一次，把未來一秒多
+   要發的音一次排進 Web Audio 自己的時間軸。setTimeout 在分頁卡頓或背景時會歪掉，
+   Web Audio 的時鐘不會。
+
+   音量刻意壓在音效之下，而且音域錯開（墊音在低頻、音效是高頻短音），
+   所以不用做 ducking 就不會互相蓋掉。 */
+const BGM = (() => {
+  const ROOT = 110;                                       // A2
+  const PENTA = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];     // 小調五聲，跨兩個八度
+  const CHORDS = [[0, 7, 15], [-2, 5, 12], [3, 10, 19], [-4, 3, 12]];
+  const BAR = 8, VOL = .34, LOOKAHEAD = 1.4;
+  const hz = n => ROOT * Math.pow(2, n / 12);
+  let bus = null, timer = null, next = 0, ci = 0, on = false;
+
+  function ensure() {
+    const c = actx(); if (!c) return null;
+    if (!bus) {
+      try {
+        bus = c.createGain(); bus.gain.value = 0;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+        bus.connect(lp).connect(c.destination);
+      } catch (e) { bus = null; return null; }
+    }
+    return c;
+  }
+  function pad(c, t, semi) {
+    for (const cents of [-4, 4]) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'triangle';
+      o.frequency.value = hz(semi) * Math.pow(2, cents / 1200);
+      g.gain.setValueAtTime(.0001, t);
+      g.gain.exponentialRampToValueAtTime(.05, t + BAR * .45);     // 慢起音
+      g.gain.exponentialRampToValueAtTime(.0001, t + BAR * 1.1);
+      o.connect(g).connect(bus); o.start(t); o.stop(t + BAR * 1.15);
+    }
+  }
+  function bell(c, t, semi) {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = hz(semi + 24);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.linearRampToValueAtTime(.07, t + .02);
+    g.gain.exponentialRampToValueAtTime(.0001, t + 2.2);
+    o.connect(g).connect(bus); o.start(t); o.stop(t + 2.3);
+  }
+  function schedule() {
+    const c = ensure(); if (!c || !on) return;
+    try {
+      while (next < c.currentTime + LOOKAHEAD) {
+        for (const semi of CHORDS[ci % CHORDS.length]) pad(c, next, semi);
+        const k = 2 + R(3);                                        // 這一段撒 2~4 顆音
+        for (let i = 0; i < k; i++) bell(c, next + Math.random() * BAR, PENTA[R(PENTA.length)]);
+        next += BAR; ci++;
+      }
+    } catch (e) { stop(0); }
+  }
+  function start() {
+    const c = ensure(); if (!c || on) return;
+    on = true; next = c.currentTime + .15; ci = R(CHORDS.length);
+    try {
+      bus.gain.cancelScheduledValues(c.currentTime);
+      bus.gain.setValueAtTime(Math.max(.0001, bus.gain.value), c.currentTime);
+      bus.gain.linearRampToValueAtTime(VOL, c.currentTime + 2.5);  // 淡入，不要突然出現
+    } catch (e) { }
+    schedule();
+    timer = setInterval(schedule, 250);
+  }
+  function stop(fade) {
+    if (timer) { clearInterval(timer); timer = null; }
+    if (!on) return;
+    on = false;
+    if (ac && bus) try {
+      bus.gain.cancelScheduledValues(ac.currentTime);
+      bus.gain.setValueAtTime(bus.gain.value, ac.currentTime);
+      bus.gain.linearRampToValueAtTime(.0001, ac.currentTime + (fade == null ? .7 : fade));
+    } catch (e) { }
+  }
+  /* 想聽（S.bgm）而且分頁在前景才播。設定切換、音訊解鎖、切分頁都呼叫這個。 */
+  function sync() {
+    const hidden = typeof document === 'object' && document && document.hidden;
+    if (S.bgm && !hidden) start(); else stop(hidden ? .25 : .7);
+  }
+  if (typeof document === 'object' && document && typeof document.addEventListener === 'function')
+    document.addEventListener('visibilitychange', sync);
+  return { sync, stop, get playing() { return on; } };
+})();
 
 const praiseWord = () => { const a = PRAISE[S.lang] || PRAISE.zh; return a[R(a.length)]; };
 
@@ -992,6 +1143,25 @@ const SHAPES = {
 const SHAPENAMES = Object.keys(SHAPES);
 /* 新手期只有 5 個圖形關（10/15/20/25/30），挑最好辨識的五個當第一印象 */
 const ONBOARD_SHAPES = ['Heart', 'Star', 'Panda', 'CatFace', 'Rocket'];
+/* 開場卡要顯示這一關是什麼圖形，所以每個圖形要有中英名字 */
+const SHAPELABEL = {
+  Heart: ['愛心', 'Heart'], Star: ['星星', 'Star'], Moon: ['月亮', 'Moon'],
+  Ghost: ['幽靈', 'Ghost'], Bamboo: ['竹子', 'Bamboo'], Panda: ['熊貓', 'Panda'],
+  Cloud: ['雲', 'Cloud'], Coin: ['錢幣', 'Coin'],
+  Maki: ['壽司捲', 'Sushi roll'], Ramen: ['拉麵', 'Ramen'], Donut: ['甜甜圈', 'Donut'],
+  Pineapple: ['鳳梨', 'Pineapple'], IceCream: ['冰淇淋', 'Ice cream'], Burger: ['漢堡', 'Burger'],
+  Cake: ['蛋糕', 'Cake'], Strawberry: ['草莓', 'Strawberry'], Mushroom: ['蘑菇', 'Mushroom'],
+  BubbleTea: ['珍奶', 'Bubble tea'],
+  Castle: ['城堡', 'Castle'], Tower: ['鐵塔', 'Tower'], Pagoda: ['寶塔', 'Pagoda'],
+  House: ['房子', 'House'], Rocket: ['火箭', 'Rocket'], Sailboat: ['帆船', 'Sailboat'],
+  Windmill: ['風車', 'Windmill'], Bridge: ['拱橋', 'Bridge'],
+  Robot: ['機器人', 'Robot'], Ninja: ['忍者', 'Ninja'], CatFace: ['貓臉', 'Cat'],
+  Dino: ['小恐龍', 'Dino'], Alien: ['外星人', 'Alien'], Slime: ['史萊姆', 'Slime'],
+  Knight: ['頭盔', 'Helmet'], Wizard: ['巫師', 'Wizard'], Bunny: ['兔子', 'Bunny'],
+  Bear: ['熊', 'Bear'],
+  Crown: ['皇冠', 'Crown'], Key: ['鑰匙', 'Key'], Diamond: ['鑽石', 'Diamond'],
+  Flower: ['花', 'Flower']
+};
 
 function shapeMask(name, N) {
   const rows = SHAPES[name] || SHAPES.Heart, S = rows.length;
@@ -1605,15 +1775,19 @@ function levelSource(n, dailyStamp) {
 }
 function newLevel(n, opt) {
   opt = opt || {};
+  flyClear();                                   // 上一關的開場動畫可能還在跑
   const lv = levelSource(n, opt.daily);
   const tier = tierOf(lv.cells);
+  // 圖形關要在開場卡上寫出是什麼圖形。每日一關用日期當種子，所以查的是那個種子。
+  const seed = opt.daily ? dailySeed(opt.daily) : n;
+  const shapeName = lv.shaped ? (levelPlan(seed).shape || null) : null;
   G = {
     level: n, daily: opt.daily || null,
     cols: lv.cols, rows: lv.rows, grid: new Map(), items: [],
     hearts: K.MaxLives, cleared: 0, total: lv.pieces.length, cellCount: lv.cells,
     combo: 0, busy: false, sel: null, score: 0, cell: 40, over: false,
     mistakes: 0, t0: Date.now(), saidNear: 0, panX: 0, panY: 0, zoom: 1,
-    tier, shaped: !!lv.shaped
+    tier, shaped: !!lv.shaped, shapeName
   };
   let id = 0;
   for (const p of lv.pieces) {
@@ -1624,6 +1798,12 @@ function newLevel(n, opt) {
   render(); updHud(); hush();
   fitBoard(true);
   tips();
+  /* 開場：卡片與箭頭飛入同時開始。動畫期間鎖住輸入（G.busy），不然使用者點到
+     還在飛的箭頭，escape 的 slide 會跟 transform 疊在一起變成鬼畫符。
+     必須先 fitBoard 再 flyIn —— flyIn 要用 shape() 算好的 o.LT 當飛行距離。 */
+  G.busy = true;
+  Promise.all([introCard(G), flyIn()])
+    .then(() => { if (G && G.level === n && !G.over) G.busy = false; });
   setTimeout(() => {
     if (G && G.level === n && G.cleared === 0 && G.hearts === K.MaxLives && !M.shown) {
       // 教學期輪流講四句規則，之後才換成一般開場台詞
@@ -1656,6 +1836,69 @@ function slide(o, to, ms, ease) {
     };
     requestAnimationFrame(step);
   });
+}
+
+/* ---------- 開場：所有箭頭從盤外飛回原位 ----------
+   每支箭頭沿著「它將來要滑出去的那個方向」從盤面外飛回原位，依生成順序一波波蓋上來。
+   為什麼順序是對的：生成器放入第 i 條蛇時，要求它的出場射線在當下是淨空的，
+   所以照放入順序飛回來，每一支的來路都只會經過還沒到位的空格。
+
+   為什麼用 CSS transform 而不是逐格改 strokeDashoffset（跟 escape 那邊一樣）：
+   大盤面有 270 支箭頭，270 個元素 × 每格兩次 style 寫入會把主執行緒吃光。
+   transform + opacity 交給瀏覽器自己補間，JS 只在頭尾各碰一次 DOM。
+   代價是箭頭飛行時是整條剛體平移，不是沿著自己的折線爬回來 —— 但因為同時淡入、
+   而且 0.4 秒就到位，看起來是「倒帶」而不是「穿過別人」。 */
+const FLY_MS = 430;
+let flyT = null, flyItems = null, flyRes = null;
+/* 一定要清乾淨：留著 inline transform 的話，之後 escape 的滑出動畫會疊在偏移上。
+   注意這裡吃的是「當初那一批 items」而不是 G.items —— 動畫還在跑時使用者可能已經
+   換關了，那時候 G 已經是新的一關，去清它的箭頭會把新關的開場動畫弄壞。 */
+function flyClear() {
+  if (flyT) { clearTimeout(flyT); flyT = null; }
+  if (flyItems) {
+    for (const o of flyItems) if (o.g) { o.g.style.transition = ''; o.g.style.transform = ''; o.g.style.opacity = ''; }
+    flyItems = null;
+  }
+  // 一定要把 Promise 解掉：newLevel 在等它才會解鎖輸入
+  if (flyRes) { const r = flyRes; flyRes = null; r(); }
+}
+function flyIn() {
+  flyClear();
+  const items = G.items, n = items.length;
+  const reduce = typeof matchMedia === 'function'
+    && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!n || reduce) return Promise.resolve();
+  // 箭頭多的時候縮短飛行距離：重繪面積小一點，整段也不會拖太久
+  const far = n > 150 ? .5 : n > 70 ? .75 : 1;
+  const win = clamp(n * 3.2, 240, 620);
+  flyItems = items;
+  for (const o of items) {
+    const [dx, dy] = DV[o.d], d = (o.LT || G.cell * 4) * far;
+    o.g.style.transition = 'none';
+    o.g.style.transform = `translate(${(dx * d).toFixed(1)}px,${(dy * d).toFixed(1)}px)`;
+    o.g.style.opacity = '0';
+  }
+  void svg.getBoundingClientRect();                     // 強制讓起始狀態生效
+  for (let i = 0; i < n; i++) {
+    const o = items[i], del = ((i / n) * win).toFixed(0);
+    o.g.style.transition = `transform ${FLY_MS}ms cubic-bezier(.16,.9,.3,1) ${del}ms,`
+      + ` opacity ${Math.round(FLY_MS * .5)}ms linear ${del}ms`;
+    o.g.style.transform = 'translate(0px,0px)';
+    o.g.style.opacity = '1';
+  }
+  return new Promise(res => {
+    flyRes = res;
+    flyT = setTimeout(flyClear, win + FLY_MS + 40);
+  });
+}
+/* 開場動畫可以跳過。一關一秒，重玩同一關或連續衝關的人會被這一秒煩死，
+   所以動畫期間點畫面任何地方就直接到位。 */
+function introSkip() {
+  if (!G || !G.busy || G.over) return false;
+  if (!flyItems && !introT) return false;          // 沒有開場動畫在跑
+  flyClear();
+  introHide();
+  return true;
 }
 
 async function onTap(o) {
@@ -1958,8 +2201,42 @@ function startLevel(n, opt) {
   }, 30));
 }
 
+/* ---------- 開場卡 ----------
+   顯示第幾關 / 難度分段 / 格數 /（圖形關的話）圖形名字，約 0.8 秒後淡出。
+   箭頭同時在飛回原位（flyIn），兩件事是並行的，不是等卡片收掉才開始。 */
+let introT = null, introRes = null;
+function introCard(g) {
+  const el = $('intro');
+  introHide();
+  el.classList.remove('out');
+  $('iLv').textContent = g.daily ? T('lvDaily') : T('levelN', g.level);
+  const t = $('iTier');
+  t.textContent = tierName(g.tier);
+  t.style.color = `var(${TIERVAR[g.tier]})`;
+  const bits = [`${g.cellCount} ${S.lang === 'zh' ? '格' : 'cells'}`, `${g.total} ${T('arrows')}`];
+  if (g.shapeName) bits.push('◆ ' + shapeLabel(g.shapeName));
+  $('iMeta').textContent = bits.join(' · ');
+  el.classList.remove('off');
+  void el.offsetWidth;
+  /* 回傳 Promise，讓 newLevel 能等「卡片收掉」跟「箭頭到位」兩件事都完成才解鎖輸入
+     —— 只等箭頭的話，卡片還蓋在盤面上就能點了，玩家會對著半透明的卡亂點。 */
+  return new Promise(res => {
+    introRes = res;
+    introT = setTimeout(() => {
+      el.classList.add('out');
+      introT = setTimeout(introHide, 340);
+    }, 650);
+  });
+}
+function shapeLabel(name) {
+  const p = (typeof SHAPELABEL === 'object' && SHAPELABEL[name]) || null;
+  return p ? (S.lang === 'zh' ? p[0] : p[1]) : name;
+}
+
 /* ---------- 畫面切換 ---------- */
 function go(id) {
+  // 離開關卡畫面就把兩層全螢幕動畫收掉，別讓它們蓋在地圖／首頁上
+  if (id !== 'game') { celCancel(); introHide(); }
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   if (id === 'home') refreshHome();
   if (id === 'map') buildMap();
@@ -2196,7 +2473,6 @@ function win() {
   const stars = G.hearts, first = G.mistakes === 0;
   S.score += G.score; S.playSec += secs;
   if (first) S.clean++;
-  praise(praiseWord());
   if (G.daily) {
     if (!S.daily[G.daily]) {
       S.daily[G.daily] = { s: G.score, t: secs };
@@ -2214,28 +2490,79 @@ function win() {
   if (S.weekTag !== weekTag()) { S.weekTag = weekTag(); S.weekScore = 0; }
   S.weekScore += G.score;
   save();
-  for (let i = 0; i < 3; i++) setTimeout(() => {
+  /* 結算窗要等 1.5 秒才開，這段時間慶祝畫面不吃點擊，玩家有可能已經按去地圖了
+     —— 所以把要顯示的數字先拍一份快照，不要讓 winModal 事後再讀 G。 */
+  const snap = {
+    stars, first, secs, level: G.level, daily: G.daily, tier: G.tier,
+    cellCount: G.cellCount, shaped: G.shaped, shapeName: G.shapeName,
+    total: G.total, mistakes: G.mistakes, score: G.score
+  };
+  celebrate(stars, () => winModal(snap));
+}
+
+/* ---------- 過關慶祝 ----------
+   全螢幕動畫先跑，結算窗延後 —— 過關的情緒高點是「清空最後一支」那一瞬間，
+   立刻蓋上一張滿是數字的表格會把它壓掉。
+   慶祝畫面刻意 pointer-events:none 且用計時器自己收掉：即使動畫或音效壞了，
+   也不會有一層看不見的東西把玩家鎖在關卡裡。 */
+let celT = [];
+function celebrate(stars, done) {
+  celT.forEach(clearTimeout); celT = [];
+  const el = $('celebrate');
+  $('cMago').src = SPRITES.side;
+  $('cBig').textContent = T('clearBig');
+  $('cStars').innerHTML = [0, 1, 2].map(i =>
+    `<span class="${stars >= i + 1 ? '' : 'dim'}" style="animation-delay:${180 + i * 190}ms">★</span>`).join('');
+  el.classList.remove('off');
+  // 星星逐顆蓋章，每一顆配一聲；沒拿到的那幾顆不出聲
+  for (let i = 0; i < 3; i++) if (stars >= i + 1)
+    celT.push(setTimeout(() => SFX.ding(), 240 + i * 190));
+  // 彩帶分四波從畫面下半噴上來
+  for (let i = 0; i < 4; i++) celT.push(setTimeout(() => {
     const ab = appBox();
-    parts.push(...Array.from({ length: 14 }, () => ({
-      x: ab.width * (.2 + Math.random() * .6), y: ab.height * .34,
-      vx: (Math.random() - .5) * 7, vy: -Math.random() * 7, r: 2 + Math.random() * 3.6, life: 1,
-      col: ['#F0B429', '#5676FF', '#12142E', '#40BDEE'][R(4)], rot: Math.random() * 6
+    parts.push(...Array.from({ length: 18 }, () => ({
+      x: ab.width * (.12 + Math.random() * .76), y: ab.height * (.52 + Math.random() * .12),
+      vx: (Math.random() - .5) * 8, vy: -5 - Math.random() * 8,
+      r: 2 + Math.random() * 4.2, life: 1,
+      col: ['#F0B429', '#5676FF', '#12142E', '#40BDEE', '#E0A82E'][R(5)], rot: Math.random() * 6
     })));
-  }, i * 170);
+  }, i * 160));
+  celT.push(setTimeout(() => {
+    el.classList.add('off');
+    done();
+  }, 1500));
+}
+/* 慶祝期間玩家可以按去地圖／首頁。那就把待開的結算窗一起取消 ——
+   不然 1.5 秒後會有一張結算窗突然蓋在地圖上，而且裡面的「下一關」按鈕
+   指的還是舊那一關。 */
+function celCancel() {
+  celT.forEach(clearTimeout); celT = [];
+  $('celebrate').classList.add('off');
+}
+/* 不管是自然結束還是中途離開，都要走這裡 —— 尤其是要把 Promise 解掉，
+   不然 newLevel 那邊 await 不到，G.busy 會永遠鎖著。 */
+function introHide() {
+  if (introT) { clearTimeout(introT); introT = null; }
+  const el = $('intro');
+  el.classList.add('off'); el.classList.remove('out');
+  if (introRes) { const r = introRes; introRes = null; r(); }
+}
+function winModal(w) {
+  const shp = w.shaped ? ' · ' + T('shapedTag') + (w.shapeName ? ' ' + shapeLabel(w.shapeName) : '') : '';
   modal(`<img class="pm" src="${SPRITES.side}" alt="馬哥">
     <h2>${T('complete')}</h2>
-    <div class="stars">${STAR(stars >= 1)}${STAR(stars >= 2)}${STAR(stars >= 3)}</div>
-    <p><b style="color:var(${TIERVAR[G.tier]})">${tierName(G.tier)}</b>
-      <span style="color:var(--ink3)"> · ${G.cellCount} ${S.lang === 'zh' ? '格' : 'cells'}${G.shaped ? ' · ' + T('shapedTag') : ''}</span></p>
+    <div class="stars">${STAR(w.stars >= 1)}${STAR(w.stars >= 2)}${STAR(w.stars >= 3)}</div>
+    <p><b style="color:var(${TIERVAR[w.tier]})">${tierName(w.tier)}</b>
+      <span style="color:var(--ink3)"> · ${w.cellCount} ${S.lang === 'zh' ? '格' : 'cells'}${shp}</span></p>
     <div class="kv">
-      <div><small>${T('cleared')}</small><b>${G.total}</b></div>
-      <div><small>${T('attempts')}</small><b>${G.mistakes + 1}</b></div>
-      <div><small>${T('time')}</small><b>${fmtTime(secs)}</b></div>
-      <div><small>${first ? T('firstTry') : T('score')}</small><b>${first ? '✓' : nfmt(G.score)}</b></div>
+      <div><small>${T('cleared')}</small><b>${w.total}</b></div>
+      <div><small>${T('attempts')}</small><b>${w.mistakes + 1}</b></div>
+      <div><small>${T('time')}</small><b>${fmtTime(w.secs)}</b></div>
+      <div><small>${w.first ? T('firstTry') : T('score')}</small><b>${w.first ? '✓' : nfmt(w.score)}</b></div>
     </div>
     <div class="cardbtns">
-      ${G.daily ? `<button class="btn" data-a="home">${T('home')}</button>`
-      : `<button class="btn" data-a="next">${T('level')} ${G.level + 1}</button>
+      ${w.daily ? `<button class="btn" data-a="home">${T('home')}</button>`
+      : `<button class="btn" data-a="next">${T('level')} ${w.level + 1}</button>
          <button class="btn ghost sm" data-a="map">${T('levels')}</button>`}
     </div>`);
 }
@@ -2282,6 +2609,7 @@ function settings() {
     <div class="sw${S[k] ? ' on' : ''}" data-t="${k}"></div></div>`;
   modal(`<h2 style="margin-bottom:10px">${T('settings')}</h2>
     ${row('sfx', T('sounds'), T('soundsD'))}
+    ${row('bgm', T('bgmS'), T('bgmD'))}
     ${row('vibr', T('vibr'))}
     <div class="setrow"><div>${T('themes')}</div><div class="seg" id="segTheme">
       ${THEMES.map(([v, zh, en]) => `<button data-v="${v}" class="${S.theme === v ? 'on' : ''}">${S.lang === 'zh' ? zh : en}</button>`).join('')}
@@ -2301,6 +2629,7 @@ function settings() {
   $('cardBody').querySelectorAll('.sw').forEach(sw => sw.addEventListener('click', () => {
     const k = sw.dataset.t; S[k] = !S[k]; sw.classList.toggle('on', S[k]); save();
     if (k === 'sfx' && S.sfx) SFX.tap();
+    if (k === 'bgm') BGM.sync();
     if (k === 'mascot' && !S.mascot) hush();
   }));
   $('segTheme').addEventListener('click', e => {
@@ -2439,6 +2768,8 @@ function pinchInfo() {
 }
 $('boardWrap').addEventListener('pointerdown', ev => {
   if (!G || G.over) return;
+  // 開場動畫還在跑的話，這一下當作「跳過」，不當作要點箭頭
+  if (introSkip()) { PEND = null; return; }
   PTRS.set(pid(ev), { x: ev.clientX || 0, y: ev.clientY || 0 });
   if (PTRS.size === 2) {
     const p = pinchInfo();
@@ -2544,7 +2875,7 @@ loadPack().then(() => {
     S, K, slotOf, levelSource, generate, decodeLevel, tierOf, pickTier, anyMove, pathOf,
     newLevel, boardBox, findSlot, awardList, weekTag, dailySeed, solvableLv, branchProfile,
     get P() { return P; }, get G() { return G; }, get ac() { return ac; }, unlockAudio,
-    snapZoom, setZoom, zoomRange
+    snapZoom, setZoom, zoomRange, BGM, shapeLabel, SHAPELABEL, SHAPENAMES, save
   };
 }).catch(err => {
   $('splash').innerHTML = `<div style="padding:26px;text-align:center;font-size:13px;line-height:1.7">

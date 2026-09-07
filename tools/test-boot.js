@@ -26,8 +26,27 @@ function makeDom(w, h) {
         this.currentTime = 0; this.sampleRate = 44100;
         this.state = 'suspended';                       // 手機一開始就是這個狀態
         this.resume = () => { this.state = 'running'; return Promise.resolve(); };
-        this.createOscillator = () => ({ type: '', frequency: { setValueAtTime() { }, exponentialRampToValueAtTime() { } }, connect: () => ({ connect() { } }), start() { }, stop() { } });
-        this.createGain = () => ({ gain: { setValueAtTime() { }, linearRampToValueAtTime() { }, exponentialRampToValueAtTime() { }, value: 0 }, connect: () => ({ connect() { } }) });
+        /* 節點都要記帳：BGM 是程式合成的，測試要能數出「真的排了幾顆音」，
+           不然合成器整個壞掉也只會安靜地什麼都不做。 */
+        const log = this.__log = { osc: 0, gain: 0, started: 0 };
+        const chain = () => { const c = { connect: () => chain() }; return c; };
+        this.createOscillator = () => {
+          log.osc++;
+          return {
+            type: '', frequency: { value: 0, setValueAtTime() { }, exponentialRampToValueAtTime() { } },
+            connect: () => chain(), start() { log.started++; }, stop() { }
+          };
+        };
+        this.createGain = () => {
+          log.gain++;
+          return {
+            gain: {
+              value: 0, setValueAtTime() { }, linearRampToValueAtTime() { },
+              exponentialRampToValueAtTime() { }, cancelScheduledValues() { }
+            },
+            connect: () => chain()
+          };
+        };
         this.createBuffer = (a, n) => ({ getChannelData: () => new Float32Array(n) });
         this.createBufferSource = () => ({ buffer: null, connect: () => ({ connect: () => ({ connect() { } }) }), start() { } });
         this.createBiquadFilter = () => ({ type: '', frequency: { value: 0 }, connect: () => ({ connect: () => ({ connect() { } }) }) });
@@ -118,6 +137,21 @@ function makeDom(w, h) {
   });
 }
 const wait = ms => new Promise(r => setTimeout(r, ms));
+/* 開場動畫（開場卡 + 箭頭飛回原位）期間 G.busy 是 true，輸入是鎖住的。
+   測試要點箭頭之前一定要先等它結束，不然點下去不會有反應。 */
+async function ready(win, ms) {
+  for (let i = 0; i < (ms || 2600) / 40; i++) {
+    const g = win.__MAGO && win.__MAGO.G;
+    if (g && !g.busy && !g.over) return true;
+    await wait(40);
+  }
+  return false;
+}
+/* 等待條件成立（給慶祝畫面之後才開的結算窗用） */
+async function until(fn, ms) {
+  for (let i = 0; i < (ms || 3000) / 40; i++) { if (fn()) return true; await wait(40); }
+  return false;
+}
 async function boot(w, h) {
   const dom = makeDom(w, h), win = dom.window;
   for (let i = 0; i < 240 && !win.__MAGO; i++) await wait(25);
@@ -131,4 +165,4 @@ function tap(win, o) {
   o.hit.dispatchEvent(ev('pointerdown'));
   win.dispatchEvent(ev('pointerup'));
 }
-module.exports = { makeDom, boot, tap, wait, HTML };
+module.exports = { makeDom, boot, tap, wait, ready, until, HTML };

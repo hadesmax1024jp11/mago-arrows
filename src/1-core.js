@@ -87,6 +87,8 @@ const STR = {
     combo: '連擊', arrows: '箭頭', sounds: '音效', vibr: '震動', themes: '主題', lang: '語言',
     guideS: '輔助線', guideD: '按住箭頭時顯示行進路線', safeS: '誤觸保護',
     safeD: '先點選、再點一次才移動', mascotS: '馬哥加油', mascotD: '讓馬哥在棋盤旁邊探頭喊話',
+    bgmS: '背景音樂', bgmD: '即時合成的環境音，不會重複',
+    lvDaily: '每日一關', clearBig: '恭喜過關',
     autoS: '自動收尾', autoD: '只剩三支時自動放它們出去', reset: '清除進度',
     resetQ: '確定要清除全部進度？', yes: '確定', no: '取消', loading: '生成關卡中…',
     shapedTag: '圖形關', mapFoot: '往下滑看更多關卡', promo: '晉級區', hold: '保留區',
@@ -116,6 +118,8 @@ const STR = {
     guideS: 'Path guide', guideD: 'Show the exit path while holding an arrow',
     safeS: 'Tap protection', safeD: 'Select first, tap again to move',
     mascotS: 'Mago cheers', mascotD: 'Let Mago pop up beside the board',
+    bgmS: 'Music', bgmD: 'Ambient, synthesised live — it never repeats',
+    lvDaily: 'Daily', clearBig: 'Cleared!',
     autoS: 'Auto finish', autoD: 'Clear the last three arrows automatically',
     reset: 'Reset progress', resetQ: 'Delete all progress?', yes: 'Yes', no: 'Cancel',
     loading: 'Building level…', shapedTag: 'Shaped', mapFoot: 'Scroll for more levels',
@@ -136,7 +140,7 @@ const tierName = i => (TIERNAME[typeof S !== 'undefined' ? S.lang : 'zh'] || TIE
 const DEF = {
   cur: 1, maxLv: 1, score: 0, bestCombo: 0, arrowsCleared: 0, misses: 0, clean: 0,
   hints: 3, stars: {}, daily: {}, byTier: [0, 0, 0, 0], weekScore: 0, weekTag: '', playSec: 0,
-  sfx: true, vibr: true, theme: 'paper', lang: 'zh', guide: false, safe: false,
+  sfx: true, bgm: true, vibr: true, theme: 'paper', lang: 'zh', guide: false, safe: false,
   mascot: true, autoFin: false, grid: false, tips: {}
 };
 let S = Object.assign({}, DEF);
@@ -184,6 +188,8 @@ function unlockAudio() {
     src.buffer = b; src.connect(c.destination); src.start(0);
     acReady = true;
   } catch (e) { }
+  // 解鎖成功才可能播得出 BGM（AudioContext 在手勢之前是 suspended）
+  try { BGM.sync(); } catch (e) { }
 }
 // 這支檔案也會被 tools/bake.js 與測試在沒有 DOM 的環境裡載入，所以要防一下
 if (typeof addEventListener === 'function')
@@ -217,6 +223,100 @@ const SFX = {
   ding() { [880, 1175].forEach((f, i) => setTimeout(() => tone(f, .18, 'triangle', .11), i * 80)); }
 };
 const buzz = ms => { if (S.vibr && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { } };
+
+/* ---------- 背景音樂 ----------
+   全程式合成，沒有音檔。塞一首 MP3 進來（base64 之後 1.5 MB 以上）會直接毀掉
+   「單檔、離線、380 kB」這件事，所以改成即時生成的極簡環境音：
+     底層　兩個微微離調的三角波和聲墊，每 8 秒換一個和弦，慢起音慢收
+     上層　小調五聲音階的稀疏音符，音高與時間點都是隨機的
+   用五聲音階的理由：沒有半音衝突，所以隨機取音永遠不會刺耳 —— 也永遠不重複，
+   不會有循環樂句聽久了發膩的問題。
+
+   排程用 lookahead 而不是 setTimeout 逐音觸發：每 250 ms 醒一次，把未來一秒多
+   要發的音一次排進 Web Audio 自己的時間軸。setTimeout 在分頁卡頓或背景時會歪掉，
+   Web Audio 的時鐘不會。
+
+   音量刻意壓在音效之下，而且音域錯開（墊音在低頻、音效是高頻短音），
+   所以不用做 ducking 就不會互相蓋掉。 */
+const BGM = (() => {
+  const ROOT = 110;                                       // A2
+  const PENTA = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];     // 小調五聲，跨兩個八度
+  const CHORDS = [[0, 7, 15], [-2, 5, 12], [3, 10, 19], [-4, 3, 12]];
+  const BAR = 8, VOL = .34, LOOKAHEAD = 1.4;
+  const hz = n => ROOT * Math.pow(2, n / 12);
+  let bus = null, timer = null, next = 0, ci = 0, on = false;
+
+  function ensure() {
+    const c = actx(); if (!c) return null;
+    if (!bus) {
+      try {
+        bus = c.createGain(); bus.gain.value = 0;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+        bus.connect(lp).connect(c.destination);
+      } catch (e) { bus = null; return null; }
+    }
+    return c;
+  }
+  function pad(c, t, semi) {
+    for (const cents of [-4, 4]) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'triangle';
+      o.frequency.value = hz(semi) * Math.pow(2, cents / 1200);
+      g.gain.setValueAtTime(.0001, t);
+      g.gain.exponentialRampToValueAtTime(.05, t + BAR * .45);     // 慢起音
+      g.gain.exponentialRampToValueAtTime(.0001, t + BAR * 1.1);
+      o.connect(g).connect(bus); o.start(t); o.stop(t + BAR * 1.15);
+    }
+  }
+  function bell(c, t, semi) {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = hz(semi + 24);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.linearRampToValueAtTime(.07, t + .02);
+    g.gain.exponentialRampToValueAtTime(.0001, t + 2.2);
+    o.connect(g).connect(bus); o.start(t); o.stop(t + 2.3);
+  }
+  function schedule() {
+    const c = ensure(); if (!c || !on) return;
+    try {
+      while (next < c.currentTime + LOOKAHEAD) {
+        for (const semi of CHORDS[ci % CHORDS.length]) pad(c, next, semi);
+        const k = 2 + R(3);                                        // 這一段撒 2~4 顆音
+        for (let i = 0; i < k; i++) bell(c, next + Math.random() * BAR, PENTA[R(PENTA.length)]);
+        next += BAR; ci++;
+      }
+    } catch (e) { stop(0); }
+  }
+  function start() {
+    const c = ensure(); if (!c || on) return;
+    on = true; next = c.currentTime + .15; ci = R(CHORDS.length);
+    try {
+      bus.gain.cancelScheduledValues(c.currentTime);
+      bus.gain.setValueAtTime(Math.max(.0001, bus.gain.value), c.currentTime);
+      bus.gain.linearRampToValueAtTime(VOL, c.currentTime + 2.5);  // 淡入，不要突然出現
+    } catch (e) { }
+    schedule();
+    timer = setInterval(schedule, 250);
+  }
+  function stop(fade) {
+    if (timer) { clearInterval(timer); timer = null; }
+    if (!on) return;
+    on = false;
+    if (ac && bus) try {
+      bus.gain.cancelScheduledValues(ac.currentTime);
+      bus.gain.setValueAtTime(bus.gain.value, ac.currentTime);
+      bus.gain.linearRampToValueAtTime(.0001, ac.currentTime + (fade == null ? .7 : fade));
+    } catch (e) { }
+  }
+  /* 想聽（S.bgm）而且分頁在前景才播。設定切換、音訊解鎖、切分頁都呼叫這個。 */
+  function sync() {
+    const hidden = typeof document === 'object' && document && document.hidden;
+    if (S.bgm && !hidden) start(); else stop(hidden ? .25 : .7);
+  }
+  if (typeof document === 'object' && document && typeof document.addEventListener === 'function')
+    document.addEventListener('visibilitychange', sync);
+  return { sync, stop, get playing() { return on; } };
+})();
 
 const praiseWord = () => { const a = PRAISE[S.lang] || PRAISE.zh; return a[R(a.length)]; };
 

@@ -199,15 +199,19 @@ function levelSource(n, dailyStamp) {
 }
 function newLevel(n, opt) {
   opt = opt || {};
+  flyClear();                                   // 上一關的開場動畫可能還在跑
   const lv = levelSource(n, opt.daily);
   const tier = tierOf(lv.cells);
+  // 圖形關要在開場卡上寫出是什麼圖形。每日一關用日期當種子，所以查的是那個種子。
+  const seed = opt.daily ? dailySeed(opt.daily) : n;
+  const shapeName = lv.shaped ? (levelPlan(seed).shape || null) : null;
   G = {
     level: n, daily: opt.daily || null,
     cols: lv.cols, rows: lv.rows, grid: new Map(), items: [],
     hearts: K.MaxLives, cleared: 0, total: lv.pieces.length, cellCount: lv.cells,
     combo: 0, busy: false, sel: null, score: 0, cell: 40, over: false,
     mistakes: 0, t0: Date.now(), saidNear: 0, panX: 0, panY: 0, zoom: 1,
-    tier, shaped: !!lv.shaped
+    tier, shaped: !!lv.shaped, shapeName
   };
   let id = 0;
   for (const p of lv.pieces) {
@@ -218,6 +222,12 @@ function newLevel(n, opt) {
   render(); updHud(); hush();
   fitBoard(true);
   tips();
+  /* 開場：卡片與箭頭飛入同時開始。動畫期間鎖住輸入（G.busy），不然使用者點到
+     還在飛的箭頭，escape 的 slide 會跟 transform 疊在一起變成鬼畫符。
+     必須先 fitBoard 再 flyIn —— flyIn 要用 shape() 算好的 o.LT 當飛行距離。 */
+  G.busy = true;
+  Promise.all([introCard(G), flyIn()])
+    .then(() => { if (G && G.level === n && !G.over) G.busy = false; });
   setTimeout(() => {
     if (G && G.level === n && G.cleared === 0 && G.hearts === K.MaxLives && !M.shown) {
       // 教學期輪流講四句規則，之後才換成一般開場台詞
@@ -250,6 +260,69 @@ function slide(o, to, ms, ease) {
     };
     requestAnimationFrame(step);
   });
+}
+
+/* ---------- 開場：所有箭頭從盤外飛回原位 ----------
+   每支箭頭沿著「它將來要滑出去的那個方向」從盤面外飛回原位，依生成順序一波波蓋上來。
+   為什麼順序是對的：生成器放入第 i 條蛇時，要求它的出場射線在當下是淨空的，
+   所以照放入順序飛回來，每一支的來路都只會經過還沒到位的空格。
+
+   為什麼用 CSS transform 而不是逐格改 strokeDashoffset（跟 escape 那邊一樣）：
+   大盤面有 270 支箭頭，270 個元素 × 每格兩次 style 寫入會把主執行緒吃光。
+   transform + opacity 交給瀏覽器自己補間，JS 只在頭尾各碰一次 DOM。
+   代價是箭頭飛行時是整條剛體平移，不是沿著自己的折線爬回來 —— 但因為同時淡入、
+   而且 0.4 秒就到位，看起來是「倒帶」而不是「穿過別人」。 */
+const FLY_MS = 430;
+let flyT = null, flyItems = null, flyRes = null;
+/* 一定要清乾淨：留著 inline transform 的話，之後 escape 的滑出動畫會疊在偏移上。
+   注意這裡吃的是「當初那一批 items」而不是 G.items —— 動畫還在跑時使用者可能已經
+   換關了，那時候 G 已經是新的一關，去清它的箭頭會把新關的開場動畫弄壞。 */
+function flyClear() {
+  if (flyT) { clearTimeout(flyT); flyT = null; }
+  if (flyItems) {
+    for (const o of flyItems) if (o.g) { o.g.style.transition = ''; o.g.style.transform = ''; o.g.style.opacity = ''; }
+    flyItems = null;
+  }
+  // 一定要把 Promise 解掉：newLevel 在等它才會解鎖輸入
+  if (flyRes) { const r = flyRes; flyRes = null; r(); }
+}
+function flyIn() {
+  flyClear();
+  const items = G.items, n = items.length;
+  const reduce = typeof matchMedia === 'function'
+    && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!n || reduce) return Promise.resolve();
+  // 箭頭多的時候縮短飛行距離：重繪面積小一點，整段也不會拖太久
+  const far = n > 150 ? .5 : n > 70 ? .75 : 1;
+  const win = clamp(n * 3.2, 240, 620);
+  flyItems = items;
+  for (const o of items) {
+    const [dx, dy] = DV[o.d], d = (o.LT || G.cell * 4) * far;
+    o.g.style.transition = 'none';
+    o.g.style.transform = `translate(${(dx * d).toFixed(1)}px,${(dy * d).toFixed(1)}px)`;
+    o.g.style.opacity = '0';
+  }
+  void svg.getBoundingClientRect();                     // 強制讓起始狀態生效
+  for (let i = 0; i < n; i++) {
+    const o = items[i], del = ((i / n) * win).toFixed(0);
+    o.g.style.transition = `transform ${FLY_MS}ms cubic-bezier(.16,.9,.3,1) ${del}ms,`
+      + ` opacity ${Math.round(FLY_MS * .5)}ms linear ${del}ms`;
+    o.g.style.transform = 'translate(0px,0px)';
+    o.g.style.opacity = '1';
+  }
+  return new Promise(res => {
+    flyRes = res;
+    flyT = setTimeout(flyClear, win + FLY_MS + 40);
+  });
+}
+/* 開場動畫可以跳過。一關一秒，重玩同一關或連續衝關的人會被這一秒煩死，
+   所以動畫期間點畫面任何地方就直接到位。 */
+function introSkip() {
+  if (!G || !G.busy || G.over) return false;
+  if (!flyItems && !introT) return false;          // 沒有開場動畫在跑
+  flyClear();
+  introHide();
+  return true;
 }
 
 async function onTap(o) {

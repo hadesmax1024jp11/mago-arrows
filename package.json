@@ -1,6 +1,6 @@
 {
   "name": "mago-arrows",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "馬哥箭頭逃脫 — a single-file, offline arrow-escape puzzle game with a deterministic level generator",
   "private": true,
   "scripts": {

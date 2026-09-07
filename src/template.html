@@ -320,6 +320,47 @@ html[data-theme="night"] #gen,html[data-theme="ink"] #gen,html[data-theme="plum"
 .spin{width:26px;height:26px;margin:0 auto;border-radius:50%;border:3px solid var(--edge);
   border-top-color:var(--key);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(1turn)}}
+
+/* ---------------- 開場卡 ----------------
+   蓋在盤面上但不吃點擊（pointer-events:none）—— 箭頭同時在飛入，
+   萬一動畫被中斷也不會有一層看不見的東西卡住輸入。 */
+#intro{position:absolute;inset:0;z-index:78;display:grid;place-items:center;
+  pointer-events:none;background:rgba(248,246,240,.55);backdrop-filter:blur(2px)}
+html[data-theme="night"] #intro,html[data-theme="ink"] #intro,html[data-theme="plum"] #intro{
+  background:rgba(20,20,20,.5)}
+#intro.off{display:none}
+#intro .ib{text-align:center;animation:introIn .5s cubic-bezier(.16,1,.3,1) both}
+#intro.out .ib{animation:introOut .34s ease-in both}
+.ilv{font-size:40px;font-weight:900;color:var(--ink);letter-spacing:-.01em;line-height:1.1}
+.itier{margin-top:4px;font-size:15px;font-weight:900;letter-spacing:.06em}
+.imeta{margin-top:3px;font-size:12px;font-weight:800;color:var(--ink3);letter-spacing:.04em}
+@keyframes introIn{0%{opacity:0;transform:scale(.86) translateY(10px)}
+  100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes introOut{to{opacity:0;transform:scale(1.1)}}
+
+/* ---------------- 過關慶祝 ----------------
+   z-index 疊法：生成中 75 < 開場卡 78 < 慶祝 79 < 彈窗 80 < 載入 90。
+   慶祝一定要在彈窗之下 —— 萬一兩者同時出現（例如慶祝中途按到什麼），
+   要讓玩家看得到可以按的彈窗，而不是被一層不吃點擊的動畫蓋住。 */
+#celebrate{position:absolute;inset:0;z-index:79;display:grid;place-items:center;
+  pointer-events:none;background:rgba(248,246,240,.5);backdrop-filter:blur(2px)}
+html[data-theme="night"] #celebrate,html[data-theme="ink"] #celebrate,
+html[data-theme="plum"] #celebrate{background:rgba(20,20,20,.46)}
+#celebrate.off{display:none}
+#celebrate .cb{text-align:center}
+.cmago{width:96px;max-height:118px;object-fit:contain;display:block;margin:0 auto 2px;
+  animation:cmagoIn .62s cubic-bezier(.2,1.5,.4,1) both}
+.cbig{font-size:34px;font-weight:900;color:var(--ink);letter-spacing:-.01em;
+  animation:cbigIn .5s cubic-bezier(.16,1.4,.3,1) both .1s}
+.cstars{margin-top:8px;display:flex;gap:9px;justify-content:center}
+.cstars span{font-size:34px;line-height:1;opacity:0;transform:scale(2.4) rotate(-22deg);
+  animation:cstamp .42s cubic-bezier(.2,1.6,.35,1) both}
+.cstars span.dim{filter:grayscale(1);opacity:.26!important}
+@keyframes cmagoIn{0%{opacity:0;transform:translateY(34px) scale(.7)}
+  100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes cbigIn{0%{opacity:0;transform:scale(.6)}100%{opacity:1;transform:scale(1)}}
+@keyframes cstamp{0%{opacity:0;transform:scale(2.4) rotate(-22deg)}
+  70%{opacity:1;transform:scale(.92) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
 </style>
 </head>
 <body>
@@ -453,6 +494,16 @@ html[data-theme="night"] #gen,html[data-theme="ink"] #gen,html[data-theme="plum"
 </section>
 
 <div id="gen" class="off"><div><div class="spin"></div><div class="lt" id="genTxt">生成關卡中…</div></div></div>
+<div id="intro" class="off"><div class="ib">
+  <div class="ilv" id="iLv"></div>
+  <div class="itier" id="iTier"></div>
+  <div class="imeta" id="iMeta"></div>
+</div></div>
+<div id="celebrate" class="off"><div class="cb">
+  <img class="cmago" id="cMago" alt="">
+  <div class="cbig" id="cBig"></div>
+  <div class="cstars" id="cStars"></div>
+</div></div>
 <div id="splash">
   <div>
     <div class="logo big" style="justify-content:center">

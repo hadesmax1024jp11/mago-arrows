@@ -179,7 +179,7 @@ async function testData() {
 }
 
 /* ------------------------------------------------------------------- DOM */
-const { boot, tap, wait } = require('./test-boot.js');
+const { boot, tap, wait, ready, until } = require('./test-boot.js');
 
 async function testDom() {
   head('開機與首頁');
@@ -214,6 +214,7 @@ async function testDom() {
     if (diff > 6) dirBad++;
   }
   ok(dirBad === 0, '箭頭尖端朝向與出場方向一致');
+  ok(await ready(win), '開場動畫跑完、輸入解鎖');
   const movable = A.anyMove();
   ok(movable.length > 0, '開局有可走的箭頭', String(movable.length));
   const before = G.items.length;
@@ -287,7 +288,11 @@ async function testDom() {
   }
   await wait(300);
   ok(A.G.items.length === 0, '所有箭頭都清掉了');
-  ok($('modal').classList.contains('on'), '過關彈窗跳出來');
+  ok(!$('celebrate').classList.contains('off'), '全螢幕慶祝畫面先跳出來');
+  ok($('cStars').querySelectorAll('span').length === 3, '慶祝畫面蓋了三顆星的章');
+  ok($('cBig').textContent.length > 0, '慶祝畫面有恭喜過關的大字', $('cBig').textContent);
+  ok(await until(() => $('modal').classList.contains('on')), '慶祝結束後結算窗才跳出來');
+  ok($('celebrate').classList.contains('off'), '慶祝畫面自己收掉了');
   ok(A.S.maxLv >= 2, '進度推到第 2 關');
   ok(A.S.stars[1] >= 1, '記下星數');
 
@@ -323,9 +328,69 @@ async function testDom() {
     `${A.G.cols}x${A.G.rows}/${A.G.items.length}`);
   ok(A.solvableLv({ cols: A.G.cols, rows: A.G.rows, pieces: A.G.items }), '現場生成的關卡可解');
 
+  head('開場：關卡卡片 + 箭頭飛回原位');
+  /* 圖形關才看得到圖形名，所以挑第 20 關（熊貓）。 */
+  win.eval("go('game'); startLevel(20);");
+  for (let i = 0; i < 200 && (!A.G || A.G.level !== 20); i++) await wait(50);
+  await wait(40);
+  ok(!$('intro').classList.contains('off'), '開場卡出現了');
+  ok(/20/.test($('iLv').textContent), '開場卡寫著第幾關', $('iLv').textContent);
+  ok($('iTier').textContent.length > 0, '開場卡寫著難度分段', $('iTier').textContent);
+  ok(/◆/.test($('iMeta').textContent) && /熊貓/.test($('iMeta').textContent),
+    '圖形關的開場卡寫出圖形名字', $('iMeta').textContent);
+  ok(A.G.busy === true, '開場動畫期間輸入是鎖住的');
+  const flying = [...$('pieces').querySelectorAll('g.pc')]
+    .filter(g => /translate/.test(g.style.transform));
+  ok(flying.length === A.G.items.length, '每支箭頭都被推到盤外準備飛回來',
+    `${flying.length}/${A.G.items.length}`);
+  ok(await ready(win), '開場動畫結束、輸入解鎖');
+  const dirty = [...$('pieces').querySelectorAll('g.pc')]
+    .filter(g => g.style.transform || g.style.transition || g.style.opacity);
+  ok(dirty.length === 0, '動畫結束後把 inline style 清乾淨（不然滑出動畫會疊在偏移上）',
+    String(dirty.length));
+  ok($('intro').classList.contains('off'), '開場卡自己收掉了');
+
+  /* 一關一秒的開場動畫，重玩同一關的人會被煩死 —— 點畫面要能跳過 */
+  win.eval("go('game'); startLevel(21);");
+  for (let i = 0; i < 200 && (!A.G || A.G.level !== 21); i++) await wait(50);
+  await wait(40);
+  ok(A.G.busy === true, '新關卡一開始輸入是鎖住的');
+  $('boardWrap').dispatchEvent(new win.PointerEvent('pointerdown',
+    { bubbles: true, clientX: 5, clientY: 5, pointerId: 9 }));
+  await wait(60);
+  ok(A.G.busy === false, '點一下就跳過開場動畫、馬上可以玩');
+  ok($('intro').classList.contains('off'), '跳過時開場卡也收掉');
+  const left = [...$('pieces').querySelectorAll('g.pc')]
+    .filter(g => g.style.transform || g.style.transition);
+  ok(left.length === 0, '跳過時箭頭直接就位、inline style 清乾淨', String(left.length));
+
+  win.eval("go('map')"); await wait(60);
+  ok($('intro').classList.contains('off') && $('celebrate').classList.contains('off'),
+    '離開關卡畫面時兩層全螢幕動畫都收掉');
+
+  head('背景音樂（程式合成，沒有音檔）');
+  const lg = A.ac && A.ac.__log;
+  ok(!!lg, '拿到音訊節點的記帳');
+  ok(A.S.bgm === true, 'BGM 預設是開的');
+  A.S.bgm = true; A.BGM.sync(); await wait(60);
+  ok(A.BGM.playing === true, '打開之後 BGM 在播');
+  ok(lg.osc > 0 && lg.started > 0, `真的排了音出去（${lg.started} 個振盪器）`);
+  const o0 = lg.started;
+  A.S.bgm = false; A.BGM.sync(); await wait(60);
+  ok(A.BGM.playing === false, '關掉之後 BGM 停了');
+  await wait(320);
+  ok(lg.started === o0, '停掉之後不再排新的音（排程器有收掉）', `${o0} → ${lg.started}`);
+  A.S.bgm = true; A.BGM.sync(); await wait(60);
+  ok(A.BGM.playing === true, '可以再打開');
+  ok(!/\.mp3|\.ogg|\.wav|audio\/mpeg|audio\/wav/.test(
+    fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')),
+    'index.html 裡沒有夾帶任何音檔');
+  A.S.bgm = false; A.BGM.sync();
+
   head('大盤面：版面、縮放、平移到四個邊');
   win.eval("go('game'); startLevel(150);");
   for (let i = 0; i < 200 && (!A.G || A.G.level !== 150); i++) await wait(50);
+  await ready(win);
   G = A.G;
   let bb = A.boardBox();
   ok(bb.x > -2 && bb.y > -2 && bb.x + bb.w < bb.vw + 2 && bb.y + bb.h < bb.vh + 2,

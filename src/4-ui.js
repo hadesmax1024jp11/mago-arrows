@@ -17,8 +17,42 @@ function startLevel(n, opt) {
   }, 30));
 }
 
+/* ---------- 開場卡 ----------
+   顯示第幾關 / 難度分段 / 格數 /（圖形關的話）圖形名字，約 0.8 秒後淡出。
+   箭頭同時在飛回原位（flyIn），兩件事是並行的，不是等卡片收掉才開始。 */
+let introT = null, introRes = null;
+function introCard(g) {
+  const el = $('intro');
+  introHide();
+  el.classList.remove('out');
+  $('iLv').textContent = g.daily ? T('lvDaily') : T('levelN', g.level);
+  const t = $('iTier');
+  t.textContent = tierName(g.tier);
+  t.style.color = `var(${TIERVAR[g.tier]})`;
+  const bits = [`${g.cellCount} ${S.lang === 'zh' ? '格' : 'cells'}`, `${g.total} ${T('arrows')}`];
+  if (g.shapeName) bits.push('◆ ' + shapeLabel(g.shapeName));
+  $('iMeta').textContent = bits.join(' · ');
+  el.classList.remove('off');
+  void el.offsetWidth;
+  /* 回傳 Promise，讓 newLevel 能等「卡片收掉」跟「箭頭到位」兩件事都完成才解鎖輸入
+     —— 只等箭頭的話，卡片還蓋在盤面上就能點了，玩家會對著半透明的卡亂點。 */
+  return new Promise(res => {
+    introRes = res;
+    introT = setTimeout(() => {
+      el.classList.add('out');
+      introT = setTimeout(introHide, 340);
+    }, 650);
+  });
+}
+function shapeLabel(name) {
+  const p = (typeof SHAPELABEL === 'object' && SHAPELABEL[name]) || null;
+  return p ? (S.lang === 'zh' ? p[0] : p[1]) : name;
+}
+
 /* ---------- 畫面切換 ---------- */
 function go(id) {
+  // 離開關卡畫面就把兩層全螢幕動畫收掉，別讓它們蓋在地圖／首頁上
+  if (id !== 'game') { celCancel(); introHide(); }
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   if (id === 'home') refreshHome();
   if (id === 'map') buildMap();
@@ -255,7 +289,6 @@ function win() {
   const stars = G.hearts, first = G.mistakes === 0;
   S.score += G.score; S.playSec += secs;
   if (first) S.clean++;
-  praise(praiseWord());
   if (G.daily) {
     if (!S.daily[G.daily]) {
       S.daily[G.daily] = { s: G.score, t: secs };
@@ -273,28 +306,79 @@ function win() {
   if (S.weekTag !== weekTag()) { S.weekTag = weekTag(); S.weekScore = 0; }
   S.weekScore += G.score;
   save();
-  for (let i = 0; i < 3; i++) setTimeout(() => {
+  /* 結算窗要等 1.5 秒才開，這段時間慶祝畫面不吃點擊，玩家有可能已經按去地圖了
+     —— 所以把要顯示的數字先拍一份快照，不要讓 winModal 事後再讀 G。 */
+  const snap = {
+    stars, first, secs, level: G.level, daily: G.daily, tier: G.tier,
+    cellCount: G.cellCount, shaped: G.shaped, shapeName: G.shapeName,
+    total: G.total, mistakes: G.mistakes, score: G.score
+  };
+  celebrate(stars, () => winModal(snap));
+}
+
+/* ---------- 過關慶祝 ----------
+   全螢幕動畫先跑，結算窗延後 —— 過關的情緒高點是「清空最後一支」那一瞬間，
+   立刻蓋上一張滿是數字的表格會把它壓掉。
+   慶祝畫面刻意 pointer-events:none 且用計時器自己收掉：即使動畫或音效壞了，
+   也不會有一層看不見的東西把玩家鎖在關卡裡。 */
+let celT = [];
+function celebrate(stars, done) {
+  celT.forEach(clearTimeout); celT = [];
+  const el = $('celebrate');
+  $('cMago').src = SPRITES.side;
+  $('cBig').textContent = T('clearBig');
+  $('cStars').innerHTML = [0, 1, 2].map(i =>
+    `<span class="${stars >= i + 1 ? '' : 'dim'}" style="animation-delay:${180 + i * 190}ms">★</span>`).join('');
+  el.classList.remove('off');
+  // 星星逐顆蓋章，每一顆配一聲；沒拿到的那幾顆不出聲
+  for (let i = 0; i < 3; i++) if (stars >= i + 1)
+    celT.push(setTimeout(() => SFX.ding(), 240 + i * 190));
+  // 彩帶分四波從畫面下半噴上來
+  for (let i = 0; i < 4; i++) celT.push(setTimeout(() => {
     const ab = appBox();
-    parts.push(...Array.from({ length: 14 }, () => ({
-      x: ab.width * (.2 + Math.random() * .6), y: ab.height * .34,
-      vx: (Math.random() - .5) * 7, vy: -Math.random() * 7, r: 2 + Math.random() * 3.6, life: 1,
-      col: ['#F0B429', '#5676FF', '#12142E', '#40BDEE'][R(4)], rot: Math.random() * 6
+    parts.push(...Array.from({ length: 18 }, () => ({
+      x: ab.width * (.12 + Math.random() * .76), y: ab.height * (.52 + Math.random() * .12),
+      vx: (Math.random() - .5) * 8, vy: -5 - Math.random() * 8,
+      r: 2 + Math.random() * 4.2, life: 1,
+      col: ['#F0B429', '#5676FF', '#12142E', '#40BDEE', '#E0A82E'][R(5)], rot: Math.random() * 6
     })));
-  }, i * 170);
+  }, i * 160));
+  celT.push(setTimeout(() => {
+    el.classList.add('off');
+    done();
+  }, 1500));
+}
+/* 慶祝期間玩家可以按去地圖／首頁。那就把待開的結算窗一起取消 ——
+   不然 1.5 秒後會有一張結算窗突然蓋在地圖上，而且裡面的「下一關」按鈕
+   指的還是舊那一關。 */
+function celCancel() {
+  celT.forEach(clearTimeout); celT = [];
+  $('celebrate').classList.add('off');
+}
+/* 不管是自然結束還是中途離開，都要走這裡 —— 尤其是要把 Promise 解掉，
+   不然 newLevel 那邊 await 不到，G.busy 會永遠鎖著。 */
+function introHide() {
+  if (introT) { clearTimeout(introT); introT = null; }
+  const el = $('intro');
+  el.classList.add('off'); el.classList.remove('out');
+  if (introRes) { const r = introRes; introRes = null; r(); }
+}
+function winModal(w) {
+  const shp = w.shaped ? ' · ' + T('shapedTag') + (w.shapeName ? ' ' + shapeLabel(w.shapeName) : '') : '';
   modal(`<img class="pm" src="${SPRITES.side}" alt="馬哥">
     <h2>${T('complete')}</h2>
-    <div class="stars">${STAR(stars >= 1)}${STAR(stars >= 2)}${STAR(stars >= 3)}</div>
-    <p><b style="color:var(${TIERVAR[G.tier]})">${tierName(G.tier)}</b>
-      <span style="color:var(--ink3)"> · ${G.cellCount} ${S.lang === 'zh' ? '格' : 'cells'}${G.shaped ? ' · ' + T('shapedTag') : ''}</span></p>
+    <div class="stars">${STAR(w.stars >= 1)}${STAR(w.stars >= 2)}${STAR(w.stars >= 3)}</div>
+    <p><b style="color:var(${TIERVAR[w.tier]})">${tierName(w.tier)}</b>
+      <span style="color:var(--ink3)"> · ${w.cellCount} ${S.lang === 'zh' ? '格' : 'cells'}${shp}</span></p>
     <div class="kv">
-      <div><small>${T('cleared')}</small><b>${G.total}</b></div>
-      <div><small>${T('attempts')}</small><b>${G.mistakes + 1}</b></div>
-      <div><small>${T('time')}</small><b>${fmtTime(secs)}</b></div>
-      <div><small>${first ? T('firstTry') : T('score')}</small><b>${first ? '✓' : nfmt(G.score)}</b></div>
+      <div><small>${T('cleared')}</small><b>${w.total}</b></div>
+      <div><small>${T('attempts')}</small><b>${w.mistakes + 1}</b></div>
+      <div><small>${T('time')}</small><b>${fmtTime(w.secs)}</b></div>
+      <div><small>${w.first ? T('firstTry') : T('score')}</small><b>${w.first ? '✓' : nfmt(w.score)}</b></div>
     </div>
     <div class="cardbtns">
-      ${G.daily ? `<button class="btn" data-a="home">${T('home')}</button>`
-      : `<button class="btn" data-a="next">${T('level')} ${G.level + 1}</button>
+      ${w.daily ? `<button class="btn" data-a="home">${T('home')}</button>`
+      : `<button class="btn" data-a="next">${T('level')} ${w.level + 1}</button>
          <button class="btn ghost sm" data-a="map">${T('levels')}</button>`}
     </div>`);
 }
@@ -341,6 +425,7 @@ function settings() {
     <div class="sw${S[k] ? ' on' : ''}" data-t="${k}"></div></div>`;
   modal(`<h2 style="margin-bottom:10px">${T('settings')}</h2>
     ${row('sfx', T('sounds'), T('soundsD'))}
+    ${row('bgm', T('bgmS'), T('bgmD'))}
     ${row('vibr', T('vibr'))}
     <div class="setrow"><div>${T('themes')}</div><div class="seg" id="segTheme">
       ${THEMES.map(([v, zh, en]) => `<button data-v="${v}" class="${S.theme === v ? 'on' : ''}">${S.lang === 'zh' ? zh : en}</button>`).join('')}
@@ -360,6 +445,7 @@ function settings() {
   $('cardBody').querySelectorAll('.sw').forEach(sw => sw.addEventListener('click', () => {
     const k = sw.dataset.t; S[k] = !S[k]; sw.classList.toggle('on', S[k]); save();
     if (k === 'sfx' && S.sfx) SFX.tap();
+    if (k === 'bgm') BGM.sync();
     if (k === 'mascot' && !S.mascot) hush();
   }));
   $('segTheme').addEventListener('click', e => {
@@ -498,6 +584,8 @@ function pinchInfo() {
 }
 $('boardWrap').addEventListener('pointerdown', ev => {
   if (!G || G.over) return;
+  // 開場動畫還在跑的話，這一下當作「跳過」，不當作要點箭頭
+  if (introSkip()) { PEND = null; return; }
   PTRS.set(pid(ev), { x: ev.clientX || 0, y: ev.clientY || 0 });
   if (PTRS.size === 2) {
     const p = pinchInfo();
@@ -603,7 +691,7 @@ loadPack().then(() => {
     S, K, slotOf, levelSource, generate, decodeLevel, tierOf, pickTier, anyMove, pathOf,
     newLevel, boardBox, findSlot, awardList, weekTag, dailySeed, solvableLv, branchProfile,
     get P() { return P; }, get G() { return G; }, get ac() { return ac; }, unlockAudio,
-    snapZoom, setZoom, zoomRange
+    snapZoom, setZoom, zoomRange, BGM, shapeLabel, SHAPELABEL, SHAPENAMES, save
   };
 }).catch(err => {
   $('splash').innerHTML = `<div style="padding:26px;text-align:center;font-size:13px;line-height:1.7">
