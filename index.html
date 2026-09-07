@@ -13,7 +13,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --paper:#F8F6F0; --paper2:#F0EDE2; --panel:#FFFFFF; --edge:#E3DFCF;
-  --dot:#D8D3C1; --grid:#EBE7D9; --cell:#EDE9DB;
+  --dot:#D8D3C1; --grid:#DCD5C0; --cell:#EDE9DB;
   --ink:#2A3326; --ink2:#6B7264; --ink3:#A3A797;
   --arrow:#2A3326; --key:#3F7D4E; --keyD:#2F6039; --keyL:#E7F0E5;
   --err:#D8503F; --gold:#E0A82E;
@@ -23,33 +23,33 @@
 }
 html[data-theme="bamboo"]{
   --paper:#F3F7F0; --paper2:#E8F0E4; --panel:#FFFFFF; --edge:#D5E3CF;
-  --dot:#C8DCC2; --grid:#E0EBDB; --cell:#E1EEDC; --keyL:#E0F0DE;
+  --dot:#C8DCC2; --grid:#CBDFC5; --cell:#E1EEDC; --keyL:#E0F0DE;
   --ink:#1F3324; --ink2:#5B7160; --ink3:#94A897;
   --arrow:#1F3324; --key:#2F8B57; --keyD:#226B42; --desk:#D9E6D4;
 }
 html[data-theme="roast"]{
   --paper:#F5EFE4; --paper2:#EBE2D2; --panel:#FCF8F1; --edge:#DCCFB8;
-  --dot:#D2C3A7; --grid:#E6DCC8; --cell:#E7DCC7; --keyL:#F1E5D2;
+  --dot:#D2C3A7; --grid:#D5C7A9; --cell:#E7DCC7; --keyL:#F1E5D2;
   --ink:#3A2A1B; --ink2:#7C6650; --ink3:#B0A08A;
   --arrow:#3A2A1B; --key:#B4712C; --keyD:#8E5620; --desk:#E3D8C4;
 }
 html[data-theme="night"]{
   --paper:#15201B; --paper2:#1C2B23; --panel:#1C2B23; --edge:#2A3D31;
-  --dot:#31473A; --grid:#233428; --cell:#243629; --keyL:#1E3E2C;
+  --dot:#31473A; --grid:#334B3C; --cell:#243629; --keyL:#1E3E2C;
   --ink:#EAF2E7; --ink2:#9BB0A2; --ink3:#6E8377;
   --arrow:#EAF2E7; --key:#4FB07A; --keyD:#38885C;
   --shadow:rgba(0,0,0,.45); --desk:#0B120E;
 }
 html[data-theme="ink"]{
   --paper:#141414; --paper2:#1C1C1C; --panel:#1C1C1C; --edge:#2C2C2C;
-  --dot:#343434; --grid:#242424; --cell:#262626; --keyL:#2A2A2A;
+  --dot:#343434; --grid:#3A3A3A; --cell:#262626; --keyL:#2A2A2A;
   --ink:#F2F0EA; --ink2:#A6A49C; --ink3:#71706A;
   --arrow:#F2F0EA; --key:#C9A227; --keyD:#9E7D18;
   --shadow:rgba(0,0,0,.5); --desk:#000000;
 }
 html[data-theme="plum"]{
   --paper:#221A26; --paper2:#2C2131; --panel:#2C2131; --edge:#3B2D42;
-  --dot:#48364F; --grid:#312537; --cell:#372840; --keyL:#3A2748;
+  --dot:#48364F; --grid:#4B3853; --cell:#372840; --keyL:#3A2748;
   --ink:#F5EAF3; --ink2:#BBA3C0; --ink3:#8A7490;
   --arrow:#F5EAF3; --key:#C56C9B; --keyD:#A24E7C;
   --shadow:rgba(0,0,0,.45); --desk:#150F18;
@@ -102,8 +102,8 @@ body{
 .iconbtn.badge b{position:absolute;right:-3px;top:-3px;background:var(--key);color:#fff;font-size:10px;
   min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;font-weight:900;
   padding:0 4px;box-shadow:0 0 0 2.5px var(--paper)}
-.iconbtn.tiny{width:32px;height:32px}
-.iconbtn.tiny svg{width:16px;height:16px}
+.iconbtn.tiny{width:36px;height:36px}
+.iconbtn.tiny svg{width:17px;height:17px}
 .chip{background:var(--cell);border-radius:99px;padding:7px 14px;font-weight:800;font-size:14px;color:var(--ink)}
 .chip.diff{color:#fff;font-size:12.5px;letter-spacing:.02em;padding:8px 13px}
 .h2{font-size:23px;font-weight:900}
@@ -164,7 +164,7 @@ body{
 .heart.gone{opacity:.22;transform:scale(.7)}
 .heart.pulse{animation:hpop .45s ease}
 @keyframes hpop{0%{transform:scale(1)}35%{transform:scale(1.45) rotate(-12deg)}100%{transform:scale(.7)}}
-.progrow{display:flex;align-items:center;gap:6px;margin:8px 2px 0;flex:0 0 auto}
+.progrow{display:flex;align-items:center;gap:7px;margin:8px 2px 0;flex:0 0 auto}
 .progwrap{flex:1;height:5px;background:var(--cell);border-radius:99px;overflow:hidden}
 .progbar{height:100%;width:0;border-radius:99px;background:var(--key);transition:width .3s}
 #boardWrap{flex:1;position:relative;min-height:0;overflow:hidden;touch-action:none}
@@ -557,6 +557,8 @@ const STR = {
     autoS: '自動收尾', autoD: '只剩三支時自動放它們出去', reset: '清除進度',
     resetQ: '確定要清除全部進度？', yes: '確定', no: '取消', loading: '生成關卡中…',
     shapedTag: '圖形關', mapFoot: '往下滑看更多關卡', promo: '晉級區', hold: '保留區',
+    fitWhole: '整盤檢視', zoom1x: '原大小 1×', zoomIn: '放大 1.8×', zoomOut: '回到原大小',
+    gridOn: '格線：開', gridOff: '格線：關',
     genfail: '這一關生成失敗了，換一關試試'
   },
   en: {
@@ -576,14 +578,17 @@ const STR = {
     lockedLP: 'Scoring starts at level {0}', locked: 'Locked',
     newLevelIn: 'Next level in {0}h {1}m {2}s', done: 'Done', todayD: "Today's level",
     topN: 'Rank {0}', week: 'This week', score: 'Score', combo: 'Combo', arrows: 'Arrows',
-    sounds: 'Sound', vibr: 'Vibration', themes: 'Theme', lang: 'Language',
+    sounds: 'Sound', soundsD: "On iPhone the side mute switch silences web audio",
+    vibr: 'Vibration', themes: 'Theme', lang: 'Language',
     guideS: 'Path guide', guideD: 'Show the exit path while holding an arrow',
     safeS: 'Tap protection', safeD: 'Select first, tap again to move',
     mascotS: 'Mago cheers', mascotD: 'Let Mago pop up beside the board',
     autoS: 'Auto finish', autoD: 'Clear the last three arrows automatically',
     reset: 'Reset progress', resetQ: 'Delete all progress?', yes: 'Yes', no: 'Cancel',
     loading: 'Building level…', shapedTag: 'Shaped', mapFoot: 'Scroll for more levels',
-    promo: 'PROMOTION', hold: 'HOLD', genfail: 'That level failed to build — try another'
+    promo: 'PROMOTION', hold: 'HOLD', genfail: 'That level failed to build — try another',
+    fitWhole: 'Whole board', zoom1x: 'Actual size 1×', zoomIn: 'Zoomed to 1.8×',
+    zoomOut: 'Back to actual size', gridOn: 'Grid on', gridOff: 'Grid off'
   }
 };
 let L = STR.zh;
@@ -625,9 +630,32 @@ function dailySeed(stamp) {
   const p = stamp.split('-').map(Number);
   return 900000 + (hash32(p[0] * 10000 + p[1] * 100 + p[2], 0xDA11) % 90000);
 }
-/* 音效 */
-let ac = null;
-const actx = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } return ac; };
+/* ---------- 音效 ----------
+   手機瀏覽器（尤其 iOS）建立的 AudioContext 一開始是 suspended，
+   必須在**使用者手勢裡**呼叫 resume()，而且 iOS 還要先播一個無聲 buffer 才算解鎖。
+   所以除了每次取用時 resume，另外掛一次性的 touch/click 監聽當保險。 */
+let ac = null, acReady = false;
+function actx() {
+  if (!ac) {
+    try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { }
+  }
+  if (ac && ac.state === 'suspended') { try { ac.resume(); } catch (e) { } }
+  return ac;
+}
+function unlockAudio() {
+  if (acReady) return;
+  const c = actx();
+  if (!c) return;
+  try {
+    const b = c.createBuffer(1, 1, 22050), src = c.createBufferSource();
+    src.buffer = b; src.connect(c.destination); src.start(0);
+    acReady = true;
+  } catch (e) { }
+}
+// 這支檔案也會被 tools/bake.js 與測試在沒有 DOM 的環境裡載入，所以要防一下
+if (typeof addEventListener === 'function')
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev =>
+    addEventListener(ev, unlockAudio, { passive: true }));
 function tone(f, d, type, vol, slide) {
   if (!S.sfx) return; const c = actx(); if (!c) return;
   const o = c.createOscillator(), g = c.createGain();
@@ -2051,7 +2079,7 @@ function settings() {
   const row = (k, t, d) => `<div class="setrow"><div>${t}${d ? `<div class="sd">${d}</div>` : ''}</div>
     <div class="sw${S[k] ? ' on' : ''}" data-t="${k}"></div></div>`;
   modal(`<h2 style="margin-bottom:10px">${T('settings')}</h2>
-    ${row('sfx', T('sounds'))}
+    ${row('sfx', T('sounds'), T('soundsD'))}
     ${row('vibr', T('vibr'))}
     <div class="setrow"><div>${T('themes')}</div><div class="seg" id="segTheme">
       ${THEMES.map(([v, zh, en]) => `<button data-v="${v}" class="${S.theme === v ? 'on' : ''}">${S.lang === 'zh' ? zh : en}</button>`).join('')}
@@ -2160,12 +2188,28 @@ document.querySelectorAll('[data-back]').forEach(b =>
   b.addEventListener('click', () => go(b.dataset.back)));
 $('btnBack').addEventListener('click', () => { hush(); go(G && G.daily ? 'daily' : 'map'); });
 $('btnRestart').addEventListener('click', askRestart);
-$('btnFit').addEventListener('click', () => { if (G) { fitBoard(); SFX.tap(); } });
+/* ⤢：盤面比畫面大時在「整盤 ↔ 1×」之間切；本來就看得完時就當放大鏡用。
+   一定要給回饋，不然小關卡按下去看起來像壞的。 */
+$('btnFit').addEventListener('click', () => {
+  if (!G) return;
+  SFX.tap();
+  const r = zoomRange(), z = G.zoom || 1;
+  if (r.min >= 1) {                       // 整盤本來就放得下
+    const zoomIn = z <= 1.05;
+    setZoom(zoomIn ? 1.8 : 1);
+    setPan(0, 0); redrawSoon();
+    toast(T(zoomIn ? 'zoomIn' : 'zoomOut'), 1300);
+    return;
+  }
+  const wasFit = Math.abs(z - r.min) < 0.02;
+  fitBoard();
+  toast(T(wasFit ? 'zoom1x' : 'fitWhole'), 1300);
+});
 $('btnGrid').addEventListener('click', () => {
   S.grid = !S.grid; save(); SFX.tap();
   $('btnGrid').classList.toggle('on', S.grid);
   if (G) drawGrid();
-  toast(T('gridTip'), 1400);
+  toast(T(S.grid ? 'gridOn' : 'gridOff'), 1300);
 });
 $('btnHint').addEventListener('click', () => {
   if (!G || G.busy || G.over) return;
@@ -2275,7 +2319,7 @@ loadPack().then(() => {
   if (typeof window !== 'undefined') window.__MAGO = {
     S, K, slotOf, levelSource, generate, decodeLevel, tierOf, pickTier, anyMove, pathOf,
     newLevel, boardBox, findSlot, awardList, weekTag, dailySeed, solvableLv, branchProfile,
-    get P() { return P; }, get G() { return G; }
+    get P() { return P; }, get G() { return G; }, get ac() { return ac; }, unlockAudio
   };
 }).catch(err => {
   $('splash').innerHTML = `<div style="padding:26px;text-align:center;font-size:13px;line-height:1.7">
